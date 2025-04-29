@@ -160,39 +160,42 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- ✅ Direct library loading - multiple CDN sources for reliability -->
-  <script src="https://unpkg.com/koilib@5.6.0/dist/koilib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
-  
-  <!-- Fallback to create minimal Koilib if CDN fails -->
+  <!-- Create koilib safely -->
   <script>
-    // Check if koilib failed to load after 500ms
-    setTimeout(function() {
-      if (typeof window.koilib === 'undefined') {
-        console.warn('❌ koilib failed to load from all CDNs, creating minimal placeholder');
-        window.koilib = {
-          Provider: function() { 
-            return { 
-              sendTransaction: () => Promise.reject(new Error('Koilib not available')),
-              call: () => Promise.reject(new Error('Koilib not available'))
-            };
+    // Create a basic placeholder for koilib that will be overwritten if CDN loads
+    window.koilib = {
+      Provider: function() { 
+        console.warn('Using placeholder koilib.Provider');
+        return { 
+          sendTransaction: () => Promise.reject(new Error('Koilib not available')),
+          call: () => Promise.reject(new Error('Koilib not available'))
+        };
+      },
+      Signer: function() { 
+        console.warn('Using placeholder koilib.Signer');
+        return { 
+          signTransaction: () => Promise.reject(new Error('Koilib not available'))
+        };
+      },
+      Contract: function(options) { 
+        console.warn('Using placeholder koilib.Contract');
+        return { 
+          functions: {
+            getTopScores: () => Promise.reject(new Error('Koilib not available')),
+            getPlayerScore: () => Promise.reject(new Error('Koilib not available')),
+            submitScore: () => Promise.reject(new Error('Koilib not available'))
           },
-          Signer: function() { 
-            return { 
-              signTransaction: () => Promise.reject(new Error('Koilib not available'))
-            };
-          },
-          Contract: function(options) { 
-            return { 
-              functions: {},
-              id: options?.id || '',
-              options: options || {}
-            };
-          }
+          id: options?.id || '',
+          options: options || {}
         };
       }
-    }, 500);
+    };
+    console.log('Created placeholder koilib until real library loads');
   </script>
+  
+  <!-- ✅ Direct library loading - multiple CDN sources for reliability -->
+  <script src="https://unpkg.com/koilib@5.5.0/dist/koilib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
   
   <!-- ✅ Koinos Integration -->
   <script>
@@ -207,9 +210,37 @@
         connectBtn.disabled = true;
       }
       
+      // Function to check if koilib is valid
+      function isRealKoilib() {
+        try {
+          // Check if this is our placeholder or the real thing
+          // The real koilib will have many more methods than our placeholder
+          return typeof koilib !== 'undefined' && 
+                 Object.keys(koilib).length > 5 &&
+                 typeof koilib.utils !== 'undefined';
+        } catch(e) {
+          return false;
+        }
+      }
+      
       // Wait a moment to initialize everything
       setTimeout(function() {
-        if (typeof window.koilib !== 'undefined' && typeof window.kondor !== 'undefined') {
+        const hasRealKoilib = isRealKoilib();
+        const hasKondor = typeof kondor !== 'undefined';
+        
+        if (hasRealKoilib) {
+          console.log('✅ Real koilib library detected!', koilib);
+        } else {
+          console.warn('❌ Only placeholder koilib available');
+        }
+        
+        if (hasKondor) {
+          console.log('✅ Kondor detected!');
+        } else {
+          console.warn('❌ Kondor not available');
+        }
+        
+        if (hasRealKoilib && hasKondor) {
           console.log('Libraries detected, wallet ready!');
           if (connectBtn) {
             connectBtn.innerText = 'Connect Wallet';
