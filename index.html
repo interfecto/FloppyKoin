@@ -160,36 +160,28 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Load koilib directly and make it a global variable -->
+  <!-- Load Blockchain Libraries -->
+  <!-- Load koilib directly, following documentation at https://joticajulian.github.io/koilib/ -->
+  <script src="https://cdn.jsdelivr.net/npm/koilib@5.5.0/dist/koilib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
+  
+  <!-- Define global variables explicitly following docs pattern -->
   <script>
-    // Set up error handling
+    // Explicitly define variables from libraries
+    var Provider = koilib.Provider;
+    var Signer = koilib.Signer;
+    var Contract = koilib.Contract;
+    var utils = koilib.utils;
+    var Transaction = koilib.Transaction;
+    var Serializer = koilib.Serializer;
+    
+    // Add error handling
     window.onerror = function(message, source, lineno, colno, error) {
       console.error("Script error:", message, "Source:", source, "Line:", lineno, "Error:", error);
-      if (message.includes("koilib") || source.includes("koilib")) {
-        alert("Error loading Koilib library. Please check your internet connection and reload the page.");
-      }
     };
+    
+    console.log("✅ Koilib loaded successfully with version:", koilib.version || "unknown");
   </script>
-  
-  <!-- Load koilib synchronously to ensure it's available -->
-  <script src="https://cdn.jsdelivr.net/npm/koilib@5.5.0/dist/koilib.min.js"></script>
-  
-  <!-- Make sure koilib is globally accessible -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Explicitly check if koilib is loaded and add to window object if needed
-      if (typeof koilib !== 'undefined') {
-        window.koilib = koilib;
-        console.log("✅ Koilib loaded successfully and exposed globally");
-      } else {
-        console.error("❌ Koilib failed to load properly");
-        alert("Koilib library failed to load. Please check your internet connection and reload the page.");
-      }
-    });
-  </script>
-  
-  <!-- Load Kondor JS -->
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
