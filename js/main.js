@@ -1,9 +1,6 @@
 // js/main.js
 // ── Floppy Bird with Kondor wallet integration ──
 
-import { connectWallet, sendScore, getPlayerScore } from './wallet.js';
-import { refreshLeaderboard } from './leaderboard.js';
-
 let debugmode = false;
 
 const states = Object.freeze({
@@ -41,6 +38,8 @@ buzz.all().setVolume(volume);
 let loopGameloop, loopPipeloop;
 
 $(document).ready(function() {
+  console.log("🎮 Game initialized!");
+  
   // ── Debug / easy flags ──
   if (window.location.search === "?debug") debugmode = true;
   if (window.location.search === "?easy")  pipeheight = 200;
@@ -69,13 +68,13 @@ $(document).ready(function() {
     connectBtn.disabled   = true;
     connectBtn.innerText  = 'Connecting…';
     try {
-      await connectWallet();
+      await window.connectWallet();
       connectBtn.innerText     = 'Connected';
       addressSpan.style.opacity = 1;
       submitBtn.disabled       = false;
       
       // Get player's previous score from blockchain
-      const playerScore = await getPlayerScore();
+      const playerScore = await window.getPlayerScore();
       if (playerScore && playerScore.score > highscore) {
         highscore = playerScore.score;
         setCookie("highscore", highscore, 999);
@@ -96,9 +95,9 @@ $(document).ready(function() {
       submitBtn.innerText = 'Submitting...';
       
       try {
-        await sendScore(score);
+        await window.sendScore(score);
         // Refresh the leaderboard after submission
-        refreshLeaderboard();
+        window.refreshLeaderboard();
         submitBtn.innerText = 'Submitted!';
         setTimeout(() => {
           submitBtn.innerText = 'Submit Score';
@@ -197,230 +196,269 @@ function startGame() {
 
   loopGameloop = setInterval(gameloop, 1000/60);
   loopPipeloop  = setInterval(updatePipes, 1400);
-
-  playerJump();
 }
 
-// ─────────────────────────────────────────────────────────────
-// RENDER & UPDATE
-function updatePlayer($p) {
-  rotation = Math.min((velocity/10)*90, 90);
-  $p.css({ rotate:rotation, top:position });
+function updatePlayer(player) {
+  // CSS rotation calculation for up/down rotation
+  rotation = Math.min((velocity / 10) * 90, 90);
+  
+  // Apply CSS updates to the player element
+  $(player).css({ 
+    rotate: rotation,
+    top: position
+  });
 }
 
 function gameloop() {
-  const $p = $("#player");
+  const player = $("#player");
+  
+  // Update player position & velocity
   velocity += gravity;
   position += velocity;
-  updatePlayer($p);
-
-  const box = $p[0].getBoundingClientRect();
-  const w   = 34 - Math.sin(Math.abs(rotation)/90)*8;
-  const h   = (24 + box.height)/2;
-  const left   = ((box.width - w)/2) + box.left;
-  const top    = ((box.height - h)/2) + box.top;
-  const right  = left + w;
-  const bottom = top + h;
-
-  if (debugmode) {
-    $("#playerbox").css({ left, top, width:w, height:h });
-  }
-
-  // ground
-  if (box.bottom >= $("#land").offset().top) {
-    return playerDead();
-  }
-  // ceiling
-  if (top <= $("#ceiling").offset().top + $("#ceiling").height()) {
+  
+  // Update player in DOM
+  updatePlayer(player);
+  
+  // Create hit boxes for hit detection
+  const box = document.getElementById('playerbox');
+  
+  // Handle the player being below the floor 
+  const boundingRect = player.get(0).getBoundingClientRect();
+  const bottom = boundingRect.bottom;
+  const ceiling = $("#ceiling").offset().top + $("#ceiling").height();
+  const floor = $("#land").offset().top;
+  
+  // Apply hit detection between:
+  // - player / floor
+  // - player / ceiling
+  // - player / pipes (passed to each pipe)
+  if (bottom >= floor) {
+    playerDead();
+    return;
+  } else if (boundingRect.top <= ceiling) {
     position = 0;
+    velocity = 0;
   }
-  if (!pipes[0]) return;
-
-  // next pipe
-  const nxt    = pipes[0];
-  const upEl   = nxt.children(".pipe_upper");
-  const pTop   = upEl.offset().top + upEl.height();
-  const pLeft  = upEl.offset().left - 2;
-  const pRight = pLeft + pipewidth;
-  const pBot   = pTop + pipeheight;
-
+  
+  // If we're in debug mode, update the debug box
   if (debugmode) {
-    $("#pipebox").css({ left:pLeft, top:pTop, width:pipewidth, height:pipeheight });
+    const boundingbox = $("#playerbox");
+    boundingbox.css({
+      left: boundingRect.left,
+      top: boundingRect.top,
+      height: boundingRect.height,
+      width: boundingRect.width
+    });
   }
-
-  if (right > pLeft && !(top > pTop && bottom < pBot)) {
-    return playerDead();
-  }
-  if (left > pRight) {
-    pipes.shift();
-    playerScore();
+  
+  // Check for a pipe collision
+  const origwidth = 34.0;
+  const origheight = 24.0;
+  
+  // ...for each pipe
+  if (pipes && Array.isArray(pipes) && pipes.length > 0) {
+    for (let i = 0; i < pipes.length; i++) {
+      const pipe = pipes[i];
+      // intersection check
+      const pipeRects = pipe.getBoundingRect();
+      if (boundingRect.right > pipeRects.left) {
+        if (boundingRect.left < pipeRects.right) {
+          if (boundingRect.bottom > pipeRects.top && boundingRect.top < pipeRects.bottom) {
+            playerDead();
+            return;
+          }
+        }
+      }
+      
+      // Score when player passes a pipe
+      if (pipe.passed === false && pipeRects.right < boundingRect.left) {
+        pipe.passed = true;
+        playerScore();
+      }
+    }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// INPUT
 function screenClick() {
-  if (currentstate === states.GameScreen)      playerJump();
-  else if (currentstate === states.SplashScreen) startGame();
+  if (currentstate === states.GameScreen) {
+    playerJump();
+  } else if (currentstate === states.SplashScreen) {
+    startGame();
+  }
 }
 
-// ─────────────────────────────────────────────────────────────
-// ACTIONS
 function playerJump() {
   velocity = jump;
-  soundJump.stop().play();
+  soundJump.stop(); soundJump.play();
 }
 
 function playerDead() {
   $(".animated")
-    .css("animation-play-state","paused")
-    .css("-webkit-animation-play-state","paused");
-
-  const pb    = $("#player").position().top + $("#player").width();
-  const moveY = Math.max(0, flyArea - pb);
-
-  $("#player").transition({ y:moveY+"px", rotate:90 }, 1000, "easeInOutCubic");
+    .css("animation-play-state", "paused")
+    .css("-webkit-animation-play-state", "paused");
+  
+  // Drop the bird to the floor
+  const playerbottom = $("#player").position().top + $("#player").width();
+  const floor = flyArea;
+  const movey = Math.max(0, floor - playerbottom);
+  
+  // Alert sounds 
+  soundHit.play().then(() => soundDie.play());
+  
+  // Final game cycle for death animation
+  $("#player").transition({ y: movey + 'px', rotate: 90 }, 1000, 'easeInOutCubic');
   currentstate = states.ScoreScreen;
+  
+  // Stop game loops
   clearInterval(loopGameloop);
   clearInterval(loopPipeloop);
-
-  if (isIncompatible.any()) {
-    showScore();
-  } else {
-    soundHit.play().bindOnce("ended", () => soundDie.play().bindOnce("ended", showScore));
-  }
-}
-
-function showScore() {
-  $("#gameover").css({ opacity:0, y:"-20px" }).removeClass("splash");
-
-  // update the scoreboard
-  setBigScore(true);
+  loopGameloop = null;
+  loopPipeloop = null;
   
-  if(score > highscore){
+  // Update score display
+  if (score > highscore) {
     highscore = score;
     setCookie("highscore", highscore, 999);
   }
-
-  setSmallScore();
-  setHighScore();
-  const won = setMedal();
-
-  soundSwoosh.stop().play();
-
-  $("#scoreboard")
-    .css({ y:"40px", opacity:0 })
-    .transition({ y:"0px", opacity:1 }, 600, "ease", function(){
-      soundSwoosh.play();
-      $("#replay").css({ y:"40px", opacity:0 })
-                   .transition({ y:"0px", opacity:1 }, 600, "ease");
-      if (won) {
-        $("#medal").css({ scale:2, opacity:0 })
-                   .transition({ scale:1, opacity:1 }, 1200, "ease");
-      }
-    });
-
-  // enable on‑chain submission
-  $("#submit-score-btn")
-    .prop("disabled", false)
-    .off("click")
-    .on("click", () => window.submitScoreToChain(score));
-
-  replayclickable = true;
+  
+  // Show score board
+  showScore();
 }
 
-// ─────────────────────────────────────────────────────────────
-// REPLAY HANDLER
-$("#replay").click(function() {
-  if (!replayclickable) return;
-  replayclickable = false;
-
-  soundSwoosh.stop().play();
-  $("#scoreboard")
-    .transition({ y:"-40px", opacity:0 }, 1000, "ease", function(){
-      $(this).css("display","none");
-      showSplash();
-      startGame();
+function showScore() {
+  $("#scoreboard").css("display", "block");
+  
+  // Update score displays
+  setSmallScore();
+  setHighScore();
+  
+  // Determine which medal to award
+  setMedal();
+  
+  const goneUp = (score >= highscore);
+  const height = goneUp ? 85 : 60;
+  
+  // Prepare for transition animations
+  $("#scoreboard").transition({ y: '40px', opacity: 0 }, 
+    0, function() {
+      $(this).css("y", "-" + height + "px");
+      $(this).transition({ y: '0px', opacity: 1 }, 600, 'ease', 
+        function() {
+          soundSwoosh.stop(); soundSwoosh.play();
+          
+          // Show the medal with a slight delay
+          $("#medal").css({ scale: 2, opacity: 0 });
+          $("#medal").transition({ scale: 1, opacity: 1 }, 1200, 'ease');
+          
+          // Make the replay button visible and clickable
+          $("#replay").css({opacity: 0});
+          $("#replay").transition({opacity: 1}, 600, 'ease');
+          
+          // Activate replay button after a delay
+          replayclickable = false;
+          setTimeout(function() {
+            replayclickable = true;
+          }, 500);
+          
+          // Bind the replay button
+          $("#replay").off("click touchstart");
+          $("#replay").on("click touchstart", function() {
+            if (!replayclickable) return;
+            soundSwoosh.stop(); soundSwoosh.play();
+            $("#scoreboard").transition({ y: '-40px', opacity: 0 }, 1000, 'ease', 
+              function() {
+                $(this).css("display", "none");
+                showSplash();
+              });
+          });
+        });
     });
-});
+}
 
-// ─────────────────────────────────────────────────────────────
-// SCORING & PIPES
 function playerScore() {
   score++;
-  soundScore.stop().play();
+  soundScore.stop(); soundScore.play();
   setBigScore();
 }
 
 function updatePipes() {
-  $(".pipe").filter(function(){
-    return $(this).position().left <= -100;
+  // Do any pipes need removal?
+  $(".pipe").filter(function() { 
+    return $(this).position().left <= -100; 
   }).remove();
-
-  const pad = 80;
-  const ctr = flyArea - pipeheight - (pad*2);
-  const tH  = Math.floor(Math.random()*ctr + pad);
-  const bH  = (flyArea - pipeheight) - tH;
-
-  const $pl = $(`
-    <div class="pipe animated">
-      <div class="pipe_upper" style="height:${tH}px"></div>
-      <div class="pipe_lower" style="height:${bH}px"></div>
-    </div>
-  `);
-  $("#flyarea").append($pl);
-  pipes.push($pl);
+  
+  // Add a new pipe
+  const padding = 80;
+  const constraint = flyArea - pipeheight - (padding * 2);
+  const topheight = Math.floor((Math.random() * constraint) + padding);
+  const bottomheight = (flyArea - pipeheight) - topheight;
+  const newpipe = $('<div class="pipe animated">' +
+    '<div class="pipe_upper" style="height: ' + topheight + 'px;"></div>' +
+    '<div class="pipe_lower" style="height: ' + bottomheight + 'px;"></div>' +
+    '</div>');
+  
+  // Set initial position and a unique ID
+  newpipe.css("left", 900);
+  
+  // Attach & store new pipe
+  $("#flyarea").append(newpipe);
+  pipes.push({
+    // Store pipe's position for collision detection
+    getBoundingRect: function() {
+      const pipeOffset = newpipe.offset();
+      const top = pipeOffset.top;
+      const bottom = top + pipeheight;
+      const left = pipeOffset.left;
+      const right = left + pipewidth;
+      // and track if we've already scored on this pipe
+      return { top: top, bottom: bottom, left: left, right: right };
+    },
+    passed: false
+  });
 }
 
-// ─────────────────────────────────────────────────────────────
-// MEDALS
 function setBigScore(erase) {
-  const $b = $("#bigscore").empty();
+  const elemscore = $("#bigscore");
+  elemscore.empty();
+  
   if (erase) return;
-  score.toString().split("").forEach(d => {
-    $b.append(`<img src="assets/font_big_${d}.png" alt="${d}">`);
-  });
+  
+  const digits = score.toString().split('');
+  for (let i = 0; i < digits.length; i++)
+    elemscore.append("<img src='assets/font_big_" + digits[i] + ".png' alt='" + digits[i] + "'>");
 }
+
 function setSmallScore() {
-  const $c = $("#currentscore").empty();
-  score.toString().split("").forEach(d => {
-    $c.append(`<img src="assets/font_small_${d}.png" alt="${d}">`);
-  });
+  const elemscore = $("#currentscore");
+  elemscore.empty();
+  
+  const digits = score.toString().split('');
+  for (let i = 0; i < digits.length; i++)
+    elemscore.append("<img src='assets/font_small_" + digits[i] + ".png' alt='" + digits[i] + "'>");
 }
+
 function setHighScore() {
-  const $h = $("#highscore").empty();
-  highscore.toString().split("").forEach(d => {
-    $h.append(`<img src="assets/font_small_${d}.png" alt="${d}">`);
-  });
+  const elemscore = $("#highscore");
+  elemscore.empty();
+  
+  const digits = highscore.toString().split('');
+  for (let i = 0; i < digits.length; i++)
+    elemscore.append("<img src='assets/font_small_" + digits[i] + ".png' alt='" + digits[i] + "'>");
 }
+
 function setMedal() {
-  const $m = $("#medal").empty();
-  let md;
-  if (score < 10) return false;
-  if (score >= 10) md="bronze";
-  if (score >= 20) md="silver";
-  if (score >= 30) md="gold";
-  if (score >= 40) md="platinum";
-  $m.append(`<img src="assets/medal_${md}.png" alt="${md}">`);
-  return true;
+  const elemmedal = $("#medal");
+  elemmedal.empty();
+  
+  if (score < 10) // no medal
+    return;
+  
+  if (score < 20) // bronze
+    elemmedal.append('<img src="assets/medal_bronze.png" alt="Bronze">');
+  else if (score < 30) // silver
+    elemmedal.append('<img src="assets/medal_silver.png" alt="Silver">');
+  else if (score < 40) // gold
+    elemmedal.append('<img src="assets/medal_gold.png" alt="Gold">');
+  else // platinum
+    elemmedal.append('<img src="assets/medal_platinum.png" alt="Platinum">');
 }
-
-// ─────────────────────────────────────────────────────────────
-// INCOMPATIBILITY
-const isIncompatible = {
-  Android:    function() { return /Android/i.test(navigator.userAgent); },
-  BlackBerry: function() { return /BlackBerry/i.test(navigator.userAgent); },
-  iOS:        function() { return /iPhone|iPad|iPod/i.test(navigator.userAgent); },
-  Opera:      function() { return /Opera Mini/i.test(navigator.userAgent); },
-  Safari:     function() { return /OS X.*Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent); },
-  Windows:    function() { return /IEMobile/i.test(navigator.userAgent); },
-  any:        function() {
-    return this.Android() || this.BlackBerry() ||
-           this.iOS()     || this.Opera()      ||
-           this.Safari()  || this.Windows();
-  }
-};
-
-// ─────────────────────────────────────────────────────────────
-// BLOCKCHAIN INTEGRATION
-window.submitScoreToChain = sendScore;

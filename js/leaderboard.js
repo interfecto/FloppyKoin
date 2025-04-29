@@ -1,15 +1,21 @@
-import { getTopScores, getPlayerScore } from './wallet.js';
+// leaderboard.js - Global leaderboard integration
 
 let leaderboardVisible = false;
 const maxLeaderboardEntries = 10;
 
 // Initialize the leaderboard functionality
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('🏆 Leaderboard module initialized');
+  
   // Get UI elements
   const leaderboardEl = document.getElementById('leaderboard');
   const leaderboardToggle = document.getElementById('leaderboard-toggle');
-  const leaderboardList = document.getElementById('leaderboard-list');
-
+  
+  if (!leaderboardEl || !leaderboardToggle) {
+    console.error('Leaderboard elements not found in DOM');
+    return;
+  }
+  
   // Add toggle functionality
   leaderboardToggle.addEventListener('click', () => {
     leaderboardVisible = !leaderboardVisible;
@@ -23,10 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Refresh leaderboard when the submit button is clicked
   const submitBtn = document.getElementById('submit-score-btn');
-  submitBtn.addEventListener('click', () => {
-    // There's a delay for the transaction to be processed
-    setTimeout(refreshLeaderboard, 2000);
-  });
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      // There's a delay for the transaction to be processed
+      setTimeout(refreshLeaderboard, 2000);
+    });
+  }
 
   // Initial refresh
   refreshLeaderboard();
@@ -37,12 +45,17 @@ async function refreshLeaderboard() {
   console.log('🔄 Refreshing leaderboard...');
   const leaderboardList = document.getElementById('leaderboard-list');
   
+  if (!leaderboardList) {
+    console.error('Leaderboard list element not found');
+    return;
+  }
+  
   // Show loading state
   leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">Loading...</span><span class="score">-</span></li>';
   
   try {
     // Get top scores from the blockchain
-    const scores = await getTopScores(maxLeaderboardEntries);
+    const scores = await window.getTopScores(maxLeaderboardEntries);
     
     if (!scores || scores.length === 0) {
       leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">No scores yet</span><span class="score">-</span></li>';
@@ -83,5 +96,5 @@ function formatAddress(address) {
   return address;
 }
 
-// Export functions for use in other modules
-export { refreshLeaderboard }; 
+// Make sure our functions are available globally as well
+window.refreshLeaderboard = refreshLeaderboard; 

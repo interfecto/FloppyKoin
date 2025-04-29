@@ -205,17 +205,17 @@
   <div class="boundingbox" id="playerbox"></div>
   <div class="boundingbox" id="pipebox"></div>
 
-  <!-- ✅ Kondor UMD (wallet integration) -->
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
-  
-  <!-- ✅ JS Modules (wallet first, game second) -->
-  <script type="module" src="js/wallet.js" defer></script>
-  <script type="module" src="js/main.js" defer></script>
-  <script type="module" src="js/leaderboard.js" defer></script>
-
   <!-- Game Libraries (non-module) -->
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
+  
+  <!-- ✅ Kondor UMD (wallet integration) -->
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
+  
+  <!-- ✅ JS Modules (wallet first, game second) -->
+  <script src="js/wallet.js"></script>
+  <script src="js/leaderboard.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
