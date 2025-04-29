@@ -235,18 +235,21 @@
         
         // Try loading koilib first (multiple sources for redundancy)
         try {
-          await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js');
-          console.log('✅ Koilib loaded from primary source (v5.5.5 MINIFIED)');
-          console.log('   Structure immediately after load:', window.koilib);
+          // await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js'); // <<< CDN VERSION
+          await loadScript('js/koinos.min.js'); // <<< LOAD LOCAL COPY
+          // console.log('✅ Koilib loaded from primary source (v5.5.5 MINIFIED)'); 
+          console.log('✅ Koilib loaded from local file (v5.5.5 MINIFIED)'); // <<< Update log
+          console.log('   Structure immediately after load:', window.koilib); 
         } catch (e) {
-          console.warn('⚠️ Primary koilib source failed, trying backup...');
-          try {
-            await loadScript('https://unpkg.com/koilib@latest/dist/koinos.min.js');
-            console.log('✅ Koilib loaded from backup source');
-            console.log('   Structure immediately after backup load:', window.koilib);
-          } catch (e2) {
-            console.error('❌ Failed to load koilib from both sources');
-          }
+          // console.warn('⚠️ Primary koilib source failed, trying backup...'); // Remove backup logic for now
+          // try {
+          //   await loadScript('https://unpkg.com/koilib@latest/dist/koinos.min.js');
+          //   console.log('✅ Koilib loaded from backup source');
+          //   console.log('   Structure immediately after backup load:', window.koilib); 
+          // } catch (e2) {
+          //   console.error('❌ Failed to load koilib from both sources');
+          // }
+          console.error('❌ Failed to load local koinos.min.js:', e);
         }
         
         // Then load Kondor
