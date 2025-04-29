@@ -154,11 +154,50 @@
       transform: translateY(2px);
     }
   </style>
+  
+  <!-- Game Libraries (non-module) - Load early -->
+  <script src="js/jquery.min.js"></script>
+  <script src="js/jquery.transit.min.js"></script>
+  <script src="js/buzz.min.js"></script>
+  
+  <!-- ✅ Koinos Library Loader - Must come first -->
+  <script src="js/koilib-loader.js"></script>
+  
+  <!-- ✅ Koinos Integration (now loaded by loader as needed) -->
+  <script>
+    // Ensures all dependencies are properly loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM fully loaded, checking for koilib/kondor...');
+      
+      // Add loading indicators to buttons
+      const connectBtn = document.getElementById('connect-btn');
+      if (connectBtn) {
+        connectBtn.innerText = 'Loading...';
+        connectBtn.disabled = true;
+      }
+      
+      // Wait a moment to initialize everything
+      setTimeout(function() {
+        if (typeof window.koilib !== 'undefined' && typeof window.kondor !== 'undefined') {
+          console.log('Libraries detected, wallet ready!');
+          if (connectBtn) {
+            connectBtn.innerText = 'Connect Wallet';
+            connectBtn.disabled = false;
+          }
+        } else {
+          console.warn('Libraries not fully loaded, wallet functionality limited');
+          if (connectBtn) {
+            connectBtn.innerText = 'Wallet Unavailable';
+          }
+        }
+      }, 1500);
+    });
+  </script>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
   <div id="wallet-bar">
-    <button id="connect-btn">Connect Wallet</button>
+    <button id="connect-btn">Loading...</button>
     <span id="wallet-address" style="margin:0 1em; opacity:0;">Not connected</span>
     <button id="submit-score-btn" disabled>Submit Score</button>
   </div>
@@ -205,15 +244,6 @@
   <!-- Debug Boxes -->
   <div class="boundingbox" id="playerbox"></div>
   <div class="boundingbox" id="pipebox"></div>
-
-  <!-- Game Libraries (non-module) -->
-  <script src="js/jquery.min.js"></script>
-  <script src="js/jquery.transit.min.js"></script>
-  <script src="js/buzz.min.js"></script>
-  
-  <!-- ✅ Koinos Integration -->
-  <script src="https://cdn.jsdelivr.net/npm/koilib@5.6.0/dist/koilib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
   
   <!-- ✅ Game Scripts -->
   <script src="js/wallet.js"></script>
