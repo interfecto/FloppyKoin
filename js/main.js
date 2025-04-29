@@ -61,69 +61,92 @@ $(document).ready(function() {
   // ── Initial splash ──
   showSplash();
 
-  // ── Wallet UI hookup ──
+  // ── Check for Kondor extension ──
   const connectBtn  = document.getElementById('connect-btn');
   const addressSpan = document.getElementById('wallet-address');
   const submitBtn   = document.getElementById('submit-score-btn');
-
-  // Prevent wallet UI clicks from affecting the game
-  ['mousedown','touchstart','click'].forEach(evt => {
-    connectBtn.addEventListener(evt, e => e.stopPropagation());
-    submitBtn .addEventListener(evt, e => e.stopPropagation());
-  });
-
-  // Connect flow with UI feedback
-  connectBtn.addEventListener('click', async e => {
-    e.stopPropagation();
-    initSounds(); // Initialize sounds on first user interaction
-    connectBtn.disabled   = true;
-    connectBtn.innerText  = 'Connecting…';
-    try {
-      await window.connectWallet();
-      connectBtn.innerText     = 'Connected';
-      addressSpan.style.opacity = 1;
-      submitBtn.disabled       = false;
-      
-      // Get player's previous score from blockchain
-      const playerScore = await window.getPlayerScore();
-      if (playerScore && playerScore.score > highscore) {
-        highscore = playerScore.score;
-        setCookie("highscore", highscore, 999);
-      }
-    } catch (err) {
-      console.error('connectWallet failed', err);
-      alert('Wallet connect failed — see console');
-      connectBtn.innerText = 'Connect Wallet';
-      connectBtn.disabled  = false;
+  
+  // Check if Kondor is available
+  if (!window.kondor) {
+    console.warn('⚠️ Kondor extension not detected');
+    if (connectBtn) {
+      connectBtn.innerText = 'Install Kondor';
+      connectBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window.open('https://chrome.google.com/webstore/detail/kondor/ghipkefkpgkladckmlmdnadmcchefhjl', '_blank');
+      });
     }
-  });
+  } else if (!window.koilib) {
+    console.warn('⚠️ Koilib not detected');
+    if (connectBtn) {
+      connectBtn.innerText = 'Koilib Missing';
+      connectBtn.disabled = true;
+    }
+  } else {
+    // Kondor is available, proceed with wallet setup
+  
+    // Prevent wallet UI clicks from affecting the game
+    ['mousedown','touchstart','click'].forEach(evt => {
+      connectBtn.addEventListener(evt, e => e.stopPropagation());
+      submitBtn.addEventListener(evt, e => e.stopPropagation());
+    });
 
-  // Configure submit score button
-  submitBtn.addEventListener('click', async e => {
-    e.stopPropagation();
-    if (score > 0) {
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Submitting...';
-      
+    // Connect flow with UI feedback
+    connectBtn.addEventListener('click', async e => {
+      e.stopPropagation();
+      initSounds(); // Initialize sounds on first user interaction
+      connectBtn.disabled   = true;
+      connectBtn.innerText  = 'Connecting…';
       try {
-        await window.sendScore(score);
-        // Refresh the leaderboard after submission
+        await window.connectWallet();
+        connectBtn.innerText     = 'Connected';
+        addressSpan.style.opacity = 1;
+        submitBtn.disabled       = false;
+        
+        // Get player's previous score from blockchain
+        const playerScore = await window.getPlayerScore();
+        if (playerScore && playerScore.score > highscore) {
+          highscore = playerScore.score;
+          setCookie("highscore", highscore, 999);
+        }
+        
+        // Refresh leaderboard after successful connection
         window.refreshLeaderboard();
-        submitBtn.innerText = 'Submitted!';
-        setTimeout(() => {
-          submitBtn.innerText = 'Submit Score';
-          submitBtn.disabled = false;
-        }, 3000);
       } catch (err) {
-        console.error('Score submission failed', err);
-        submitBtn.innerText = 'Submit Failed';
-        setTimeout(() => {
-          submitBtn.innerText = 'Submit Score';
-          submitBtn.disabled = false;
-        }, 3000);
+        console.error('connectWallet failed', err);
+        alert('Wallet connect failed — ' + (err.message || 'see console'));
+        connectBtn.innerText = 'Connect Wallet';
+        connectBtn.disabled  = false;
       }
-    }
-  });
+    });
+
+    // Configure submit score button
+    submitBtn.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (score > 0) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Submitting...';
+        
+        try {
+          await window.sendScore(score);
+          // Refresh the leaderboard after submission
+          window.refreshLeaderboard();
+          submitBtn.innerText = 'Submitted!';
+          setTimeout(() => {
+            submitBtn.innerText = 'Submit Score';
+            submitBtn.disabled = false;
+          }, 3000);
+        } catch (err) {
+          console.error('Score submission failed', err);
+          submitBtn.innerText = 'Submit Failed';
+          setTimeout(() => {
+            submitBtn.innerText = 'Submit Score';
+            submitBtn.disabled = false;
+          }, 3000);
+        }
+      }
+    });
+  }
 
   // ── Game click/tap handling ──
   // Remove old global handlers
