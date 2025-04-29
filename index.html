@@ -255,6 +255,23 @@
           console.warn('⚠️ Failed to load Kondor');
         }
         
+        // --- WAIT FOR LIBRARIES TO INITIALIZE ---
+        console.log('⏳ Waiting for Koilib and Kondor to initialize...');
+        let checks = 0;
+        const maxChecks = 50; // Wait max 5 seconds (50 * 100ms)
+        while ((typeof koilib === 'undefined' || typeof koilib.Provider === 'undefined' || typeof kondor === 'undefined' || typeof kondor.getAccounts === 'undefined') && checks < maxChecks) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+          checks++;
+        }
+
+        if (checks >= maxChecks) {
+          console.error('❌ Timed out waiting for Koinos libraries to initialize.');
+          // Optionally, inform the user here
+          throw new Error('Koinos libraries failed to initialize in time.');
+        }
+        console.log(`✅ Koinos libraries initialized after ${checks * 100}ms.`);
+        // --- END WAIT ---
+        
         // Debug helper function
         window.debugContract = async function() {
           try {
@@ -320,7 +337,8 @@
           }
         };
         
-        // Load our game scripts after blockchain libraries
+        // Load our game scripts AFTER blockchain libraries are ready
+        console.log('🚀 Loading game scripts...'); // Added log
         await loadScript('js/wallet.js');
         await loadScript('js/leaderboard.js');
         await loadScript('js/main.js');
