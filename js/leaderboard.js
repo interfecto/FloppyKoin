@@ -1,4 +1,4 @@
-// leaderboard.js - Global leaderboard integration
+// leaderboard.js - Global leaderboard integration with nickname support
 
 let leaderboardVisible = false;
 const maxLeaderboardEntries = 10;
@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     connectBtn.addEventListener('click', () => {
       // Wait a moment for the connection to complete
       setTimeout(refreshLeaderboard, 2000);
+      
+      // Show nickname prompt if not set
+      if (!localStorage.getItem('playerNickname')) {
+        promptForNickname();
+      }
     });
   }
 
@@ -53,9 +58,47 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
   
+  // Add nickname button to the leaderboard header
+  const leaderboardHeader = document.querySelector('#leaderboard h3');
+  if (leaderboardHeader) {
+    const nicknameBtn = document.createElement('button');
+    nicknameBtn.id = 'nickname-btn';
+    nicknameBtn.innerText = '👤 Set Nickname';
+    nicknameBtn.style.fontSize = '10px';
+    nicknameBtn.style.marginLeft = '8px';
+    nicknameBtn.style.padding = '2px 5px';
+    nicknameBtn.style.backgroundColor = '#f7d51d';
+    nicknameBtn.style.border = 'none';
+    nicknameBtn.style.borderRadius = '3px';
+    nicknameBtn.style.cursor = 'pointer';
+    
+    nicknameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      promptForNickname();
+    });
+    
+    leaderboardHeader.appendChild(nicknameBtn);
+  }
+  
   // Delayed initial refresh
   setTimeout(refreshLeaderboard, 1000);
 });
+
+// Prompt the user to set a nickname
+function promptForNickname() {
+  const currentNickname = localStorage.getItem('playerNickname') || 'Player';
+  const nickname = prompt(`Enter your nickname (max 12 chars):`, currentNickname);
+  
+  if (nickname && nickname.trim() !== '') {
+    // Limit to 12 characters
+    const trimmedNickname = nickname.trim().substring(0, 12);
+    window.setPlayerNickname(trimmedNickname);
+    alert(`Nickname set to: ${trimmedNickname}`);
+    
+    // Update the leaderboard to reflect the nickname change
+    refreshLeaderboard();
+  }
+}
 
 // Refresh the leaderboard with latest data from the blockchain
 async function refreshLeaderboard() {
@@ -84,12 +127,12 @@ async function refreshLeaderboard() {
     scores.forEach((score, index) => {
       const listItem = document.createElement('li');
       
-      // Format the player address to show a shortened version
-      const shortAddress = formatAddress(score.player);
+      // Format the player address or use nickname
+      const displayName = score.nickname || formatAddress(score.player);
       
       listItem.innerHTML = `
         <span class="rank">${index + 1}.</span>
-        <span class="player" title="${score.player}">${shortAddress}</span>
+        <span class="player" title="${score.player}">${displayName}</span>
         <span class="score">${score.score}</span>
       `;
       
@@ -114,4 +157,5 @@ function formatAddress(address) {
 }
 
 // Make sure our functions are available globally as well
-window.refreshLeaderboard = refreshLeaderboard; 
+window.refreshLeaderboard = refreshLeaderboard;
+window.promptForNickname = promptForNickname; 

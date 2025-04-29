@@ -160,91 +160,9 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Hard-code the actual library content for koilib -->
-  <script>
-  // Define global koilib object with necessary components
-  // This implementation is a simple shim providing just enough functionality
-  // to make the wallet connection work
-  window.koilib = {
-    Provider: function(endpoints) {
-      this.endpoints = endpoints;
-      
-      // Simulate Provider methods
-      this.call = function(method, params) {
-        console.log('Provider.call', method, params);
-        return Promise.resolve({});
-      };
-    },
-    
-    Signer: function(options) {
-      this.options = options;
-      this.provider = options.provider;
-      this.address = options.address;
-      this.signCallback = options.signCallback;
-      
-      // Simulate Signer methods
-      this.getAddress = function() {
-        return this.address;
-      };
-      
-      this.signTransaction = function(tx) {
-        console.log('Signer.signTransaction', tx);
-        if (this.signCallback) {
-          return this.signCallback(tx);
-        }
-        return Promise.resolve(tx);
-      };
-    },
-    
-    Contract: function(options) {
-      this.options = options;
-      this.id = options.id;
-      this.abi = options.abi;
-      this.provider = options.provider;
-      this.signer = options.signer;
-      
-      // Set up the functions object based on the ABI
-      this.functions = {};
-      if (this.abi && this.abi.methods) {
-        Object.keys(this.abi.methods).forEach(methodName => {
-          this.functions[methodName] = function(args) {
-            console.log('Contract.functions.' + methodName, args);
-            
-            // For read-only methods, return a mock result
-            if (methodName === 'getTopScores') {
-              return Promise.resolve({
-                result: {
-                  scores: []
-                }
-              });
-            }
-            
-            // For write methods, return a mock transaction
-            return Promise.resolve({
-              operation: {},
-              transaction: {
-                id: 'mock-transaction-id-' + Date.now(),
-                wait: function() {
-                  return Promise.resolve({ blockNumber: 12345 });
-                }
-              }
-            });
-          };
-        });
-      }
-      
-      // Get contract ID
-      this.getId = function() {
-        return this.id;
-      };
-    }
-  };
-  
-  console.log('✅ Mock koilib defined for wallet connectivity');
-  </script>
-  
-  <!-- Load Kondor -->
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
+  <!-- Load Koinos libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/koilib@latest/dist/koinos.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
