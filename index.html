@@ -161,8 +161,27 @@
   <script src="js/buzz.min.js"></script>
   
   <!-- Load Koinos libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/koilib@latest/dist/koinos.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/koilib@1.0.0/dist/koinos.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  
+  <!-- Verify libraries loaded correctly -->
+  <script>
+    // Check if libraries loaded properly
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('🔍 Checking if Koinos libraries are loaded properly...');
+      if (typeof window.koilib === 'undefined') {
+        console.warn('⚠️ Koilib not detected in global scope, will use fallback');
+      } else {
+        console.log('✅ Koilib successfully loaded');
+      }
+      
+      if (typeof window.kondor === 'undefined') {
+        console.warn('⚠️ Kondor not detected, wallet features may be limited');
+      } else {
+        console.log('✅ Kondor successfully loaded');
+      }
+    });
+  </script>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
