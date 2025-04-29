@@ -26,14 +26,24 @@ let pipes        = [];
 
 let replayclickable = false;
 
-// preload sounds
+// preload sounds - initialize but don't play until user interacts
 const volume      = 30;
-const soundJump   = new buzz.sound("assets/sounds/sfx_wing.ogg");
-const soundScore  = new buzz.sound("assets/sounds/sfx_point.ogg");
-const soundHit    = new buzz.sound("assets/sounds/sfx_hit.ogg");
-const soundDie    = new buzz.sound("assets/sounds/sfx_die.ogg");
-const soundSwoosh = new buzz.sound("assets/sounds/sfx_swooshing.ogg");
-buzz.all().setVolume(volume);
+let soundJump, soundScore, soundHit, soundDie, soundSwoosh;
+let soundsLoaded = false;
+
+// Function to initialize sounds only after user interaction
+function initSounds() {
+  if (soundsLoaded) return;
+  
+  soundJump   = new buzz.sound("assets/sounds/sfx_wing.ogg");
+  soundScore  = new buzz.sound("assets/sounds/sfx_point.ogg");
+  soundHit    = new buzz.sound("assets/sounds/sfx_hit.ogg");
+  soundDie    = new buzz.sound("assets/sounds/sfx_die.ogg");
+  soundSwoosh = new buzz.sound("assets/sounds/sfx_swooshing.ogg");
+  buzz.all().setVolume(volume);
+  
+  soundsLoaded = true;
+}
 
 let loopGameloop, loopPipeloop;
 
@@ -65,6 +75,7 @@ $(document).ready(function() {
   // Connect flow with UI feedback
   connectBtn.addEventListener('click', async e => {
     e.stopPropagation();
+    initSounds(); // Initialize sounds on first user interaction
     connectBtn.disabled   = true;
     connectBtn.innerText  = 'Connecting…';
     try {
@@ -123,6 +134,8 @@ $(document).ready(function() {
   // any clientY ≤ walletHeight.
   const walletHeight = document.getElementById('wallet-bar').offsetHeight || 50;
   $(document).on("mousedown touchstart", function(e) {
+    initSounds(); // Initialize sounds on first user interaction
+    
     // ignore the top wallet bar
     if (e.clientY <= walletHeight) return;
     // ignore the replay button
@@ -136,6 +149,8 @@ $(document).ready(function() {
 
   // spacebar works everywhere
   $(document).keydown(function(e) {
+    initSounds(); // Initialize sounds on first user interaction
+    
     if (e.keyCode === 32) {
       if (currentstate === states.ScoreScreen) {
         $("#replay").click();
@@ -172,7 +187,10 @@ function showSplash() {
   $("#player").css({ y:0, x:0 });
   updatePlayer($("#player"));
 
-  soundSwoosh.stop().play();
+  if (soundsLoaded) {
+    soundSwoosh.stop();
+    soundSwoosh.play();
+  }
 
   $(".pipe").remove();
   pipes = [];
@@ -289,7 +307,10 @@ function screenClick() {
 
 function playerJump() {
   velocity = jump;
-  soundJump.stop(); soundJump.play();
+  if (soundsLoaded) {
+    soundJump.stop();
+    soundJump.play();
+  }
 }
 
 function playerDead() {
@@ -302,8 +323,11 @@ function playerDead() {
   const floor = flyArea;
   const movey = Math.max(0, floor - playerbottom);
   
-  // Alert sounds 
-  soundHit.play().then(() => soundDie.play());
+  // Alert sounds - fixed to not use Promise chain
+  if (soundsLoaded) {
+    soundHit.play();
+    soundDie.play();
+  }
   
   // Final game cycle for death animation
   $("#player").transition({ y: movey + 'px', rotate: 90 }, 1000, 'easeInOutCubic');
@@ -344,7 +368,10 @@ function showScore() {
       $(this).css("y", "-" + height + "px");
       $(this).transition({ y: '0px', opacity: 1 }, 600, 'ease', 
         function() {
-          soundSwoosh.stop(); soundSwoosh.play();
+          if (soundsLoaded) {
+            soundSwoosh.stop();
+            soundSwoosh.play();
+          }
           
           // Show the medal with a slight delay
           $("#medal").css({ scale: 2, opacity: 0 });
@@ -364,7 +391,10 @@ function showScore() {
           $("#replay").off("click touchstart");
           $("#replay").on("click touchstart", function() {
             if (!replayclickable) return;
-            soundSwoosh.stop(); soundSwoosh.play();
+            if (soundsLoaded) {
+              soundSwoosh.stop();
+              soundSwoosh.play();
+            }
             $("#scoreboard").transition({ y: '-40px', opacity: 0 }, 1000, 'ease', 
               function() {
                 $(this).css("display", "none");
@@ -377,7 +407,10 @@ function showScore() {
 
 function playerScore() {
   score++;
-  soundScore.stop(); soundScore.play();
+  if (soundsLoaded) {
+    soundScore.stop();
+    soundScore.play();
+  }
   setBigScore();
 }
 
