@@ -235,8 +235,8 @@
         
         // Try loading koilib first (multiple sources for redundancy)
         try {
-          await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.js');
-          console.log('✅ Koilib loaded from primary source (v5.5.5)');
+          await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js');
+          console.log('✅ Koilib loaded from primary source (v5.5.5 MINIFIED)');
           console.log('   Structure immediately after load:', window.koilib);
         } catch (e) {
           console.warn('⚠️ Primary koilib source failed, trying backup...');
