@@ -235,8 +235,8 @@
         
         // Try loading koilib first (multiple sources for redundancy)
         try {
-          await loadScript('https://cdn.jsdelivr.net/npm/koilib@6/dist/koinos.min.js');
-          console.log('✅ Koilib loaded from primary source (v6)');
+          await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.js');
+          console.log('✅ Koilib loaded from primary source (v5.5.5)');
           console.log('   Structure immediately after load:', window.koilib);
         } catch (e) {
           console.warn('⚠️ Primary koilib source failed, trying backup...');
@@ -262,7 +262,7 @@
         console.log('⏳ Waiting for Koilib and Kondor to initialize...');
         let checks = 0;
         const maxChecks = 50; // Wait max 5 seconds (50 * 100ms)
-        while ((typeof Provider === 'undefined' || typeof kondor === 'undefined' || typeof kondor.getAccounts === 'undefined') && checks < maxChecks) {
+        while ((typeof koilib === 'undefined' || typeof koilib.Provider === 'undefined' || typeof kondor === 'undefined' || typeof kondor.getAccounts === 'undefined') && checks < maxChecks) {
           await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
           checks++;
         }
