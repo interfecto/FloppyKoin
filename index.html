@@ -160,39 +160,10 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Load blockchain libraries and make them globally available -->
-  <!-- Inlined script to guarantee koilib is loaded and globally available -->
-  <script>
-    // Function to load script synchronously
-    function loadScriptSync(url) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, false); // false makes it synchronous
-      xhr.send();
-      
-      if (xhr.status === 200) {
-        var script = document.createElement('script');
-        script.textContent = xhr.responseText;
-        document.head.appendChild(script);
-        return true;
-      } else {
-        console.error('Failed to load script:', url);
-        return false;
-      }
-    }
-    
-    // Load koilib synchronously
-    if (loadScriptSync('https://cdn.jsdelivr.net/npm/koilib@5.5.0/dist/koilib.min.js')) {
-      console.log('✅ Koilib loaded successfully');
-      
-      // Make it globally available explicitly
-      window.koilib = koilib;
-    } else {
-      alert('Failed to load Koilib library. Please refresh the page and try again.');
-    }
-    
-    // Load Kondor
-    loadScriptSync('https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js');
-  </script>
+  <!-- Load blockchain libraries -->
+  <!-- Use the correct version 9.1.0 that is available on jsdelivr -->
+  <script src="https://cdn.jsdelivr.net/npm/koilib@9.1.0/dist/koinos.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
