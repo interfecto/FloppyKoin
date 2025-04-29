@@ -160,8 +160,28 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- ✅ Direct library loading -->
+  <!-- ✅ Library loading with error handling -->
+  <script>
+    // Error handling for library loading
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error("Script error:", message, "Source:", source, "Line:", lineno, "Error:", error);
+      if (message.includes("koilib") || source.includes("koilib")) {
+        alert("Error loading Koilib library. Please check your internet connection and reload the page.");
+      }
+    };
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/koilib@5.5.0/dist/koilib.min.js"></script>
+  <script>
+    // Verify koilib loaded properly
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof koilib === 'undefined') {
+        console.error("Koilib failed to load properly");
+        alert("Koilib library failed to load. Please check your internet connection and reload the page.");
+      } else {
+        console.log("✅ Koilib loaded successfully:", koilib.version || "unknown version");
+      }
+    });
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
 </head>
 <body>
