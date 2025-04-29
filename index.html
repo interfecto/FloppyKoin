@@ -160,9 +160,9 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- ✅ Library loading with error handling -->
+  <!-- Load koilib directly and make it a global variable -->
   <script>
-    // Error handling for library loading
+    // Set up error handling
     window.onerror = function(message, source, lineno, colno, error) {
       console.error("Script error:", message, "Source:", source, "Line:", lineno, "Error:", error);
       if (message.includes("koilib") || source.includes("koilib")) {
@@ -170,18 +170,25 @@
       }
     };
   </script>
+  
+  <!-- Load koilib synchronously to ensure it's available -->
   <script src="https://cdn.jsdelivr.net/npm/koilib@5.5.0/dist/koilib.min.js"></script>
+  
+  <!-- Make sure koilib is globally accessible -->
   <script>
-    // Verify koilib loaded properly
-    window.addEventListener('DOMContentLoaded', () => {
-      if (typeof koilib === 'undefined') {
-        console.error("Koilib failed to load properly");
-        alert("Koilib library failed to load. Please check your internet connection and reload the page.");
+    document.addEventListener('DOMContentLoaded', function() {
+      // Explicitly check if koilib is loaded and add to window object if needed
+      if (typeof koilib !== 'undefined') {
+        window.koilib = koilib;
+        console.log("✅ Koilib loaded successfully and exposed globally");
       } else {
-        console.log("✅ Koilib loaded successfully:", koilib.version || "unknown version");
+        console.error("❌ Koilib failed to load properly");
+        alert("Koilib library failed to load. Please check your internet connection and reload the page.");
       }
     });
   </script>
+  
+  <!-- Load Kondor JS -->
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
 </head>
 <body>
