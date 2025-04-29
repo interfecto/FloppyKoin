@@ -45,15 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initial refresh - but with a message that encourages wallet connection
+  // Initialize the leaderboard with a message
   const leaderboardList = document.getElementById('leaderboard-list');
   if (leaderboardList) {
     leaderboardList.innerHTML = `
-      <li><span class="rank">-</span><span class="player">Connect wallet to see global scores</span><span class="score">-</span></li>
+      <li><span class="rank">-</span><span class="player">Connect wallet for scores</span><span class="score">-</span></li>
     `;
   }
   
-  // Delayed initial refresh (gives time for any auto-connection to happen)
+  // Delayed initial refresh
   setTimeout(refreshLeaderboard, 1000);
 });
 
@@ -67,23 +67,11 @@ async function refreshLeaderboard() {
     return;
   }
   
-  // Before we try to fetch scores, check if we're connected
-  const addressSpan = document.getElementById('wallet-address');
-  const isWalletConnected = addressSpan && addressSpan.style.opacity === '1';
-  
-  // If wallet not connected, show a helpful message
-  if (!isWalletConnected) {
-    leaderboardList.innerHTML = `
-      <li><span class="rank">-</span><span class="player">Connect wallet to see global scores</span><span class="score">-</span></li>
-      <li><span class="rank">-</span><span class="player">Local data only</span><span class="score">-</span></li>
-    `;
-  } else {
-    // Show loading state when connected
-    leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">Loading blockchain data...</span><span class="score">-</span></li>';
-  }
+  // Show loading state
+  leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">Loading scores...</span><span class="score">-</span></li>';
   
   try {
-    // Get top scores from the blockchain
+    // Get top scores
     const scores = await window.getTopScores(maxLeaderboardEntries);
     
     if (!scores || scores.length === 0) {
