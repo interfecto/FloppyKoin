@@ -155,33 +155,14 @@
     }
   </style>
   
-  <!-- Game Libraries (non-module) - Load early -->
+  <!-- Load libraries in the right order -->
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Load Blockchain Libraries -->
-  <!-- Load koilib directly, following documentation at https://joticajulian.github.io/koilib/ -->
+  <!-- Load blockchain libraries -->
   <script src="https://cdn.jsdelivr.net/npm/koilib@5.5.0/dist/koilib.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
-  
-  <!-- Define global variables explicitly following docs pattern -->
-  <script>
-    // Explicitly define variables from libraries
-    var Provider = koilib.Provider;
-    var Signer = koilib.Signer;
-    var Contract = koilib.Contract;
-    var utils = koilib.utils;
-    var Transaction = koilib.Transaction;
-    var Serializer = koilib.Serializer;
-    
-    // Add error handling
-    window.onerror = function(message, source, lineno, colno, error) {
-      console.error("Script error:", message, "Source:", source, "Line:", lineno, "Error:", error);
-    };
-    
-    console.log("✅ Koilib loaded successfully with version:", koilib.version || "unknown");
-  </script>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
