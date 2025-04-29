@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Floppy Bird</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <meta name="description" content="A remake of Flappy Bird built in HTML/JS" />
+
+  <!-- Stylesheets -->
+  <link href="css/reset.css" rel="stylesheet">
+  <link href="css/main.css" rel="stylesheet">
+  <style>
+    #wallet-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: #92cd41;
+      border-bottom: 4px solid #76c442;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 0 10px;
+    }
+    #gamecontainer {
+      margin-top: 50px;
+    }
+    
+    /* Button styles */
+    #connect-btn, #submit-score-btn {
+      background-color: #f7d51d;
+      color: #333;
+      border: none;
+      border-bottom: 4px solid #e59400;
+      border-radius: 5px;
+      padding: 5px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      text-transform: uppercase;
+      margin: 0 8px;
+    }
+    
+    #connect-btn:hover, #submit-score-btn:hover {
+      background-color: #ffde4c;
+      transform: translateY(-2px);
+    }
+    
+    #connect-btn:active, #submit-score-btn:active {
+      border-bottom-width: 2px;
+      transform: translateY(2px);
+    }
+    
+    #connect-btn:disabled, #submit-score-btn:disabled {
+      background-color: #cccccc;
+      border-bottom-color: #999999;
+      color: #666666;
+      cursor: not-allowed;
+    }
+    
+    #wallet-address {
+      background-color: rgba(255, 255, 255, 0.3);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Leaderboard styles */
+    #leaderboard {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      width: 250px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      z-index: 100;
+      font-family: 'Press Start 2P', Arial, sans-serif;
+      display: none;
+      border: 3px solid #92cd41;
+    }
+    #leaderboard h3 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #333;
+      font-size: 14px;
+    }
+    #leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #leaderboard-list li {
+      padding: 8px 5px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #leaderboard-list li:last-child {
+      border-bottom: none;
+    }
+    #leaderboard-list .rank {
+      font-weight: bold;
+      width: 30px;
+      color: #e59400;
+    }
+    #leaderboard-list .player {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0 5px;
+      font-size: 12px;
+    }
+    #leaderboard-list .score {
+      font-weight: bold;
+      color: #76c442;
+    }
+    #leaderboard-toggle {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      z-index: 101;
+      background: #f7d51d;
+      color: #333;
+      border: none;
+      border-bottom: 3px solid #e59400;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+    
+    #leaderboard-toggle:hover {
+      background-color: #ffde4c;
+      transform: translateY(-2px);
+    }
+    
+    #leaderboard-toggle:active {
+      border-bottom-width: 1px;
+      transform: translateY(2px);
+    }
+  </style>
+</head>
+<body>
+  <!-- 🔐 Wallet UI -->
+  <div id="wallet-bar">
+    <button id="connect-btn">Connect Wallet</button>
+    <span id="wallet-address" style="margin:0 1em; opacity:0;">Not connected</span>
+    <button id="submit-score-btn" disabled>Submit Score</button>
+  </div>
+
+  <!-- 📊 Leaderboard Toggle -->
+  <button id="leaderboard-toggle">Leaderboard</button>
+  
+  <!-- 📊 Leaderboard -->
+  <div id="leaderboard">
+    <h3>Global Leaderboard</h3>
+    <ul id="leaderboard-list">
+      <li><span class="rank">1.</span><span class="player">Loading...</span><span class="score">-</span></li>
+    </ul>
+  </div>
+
+  <!-- 🎮 Game Container -->
+  <div id="gamecontainer">
+    <div id="gamescreen">
+      <div id="sky" class="animated">
+        <div id="flyarea">
+          <div id="ceiling" class="animated"></div>
+          <div id="player" class="bird animated"></div>
+          <div id="bigscore"></div>
+          <div id="splash"></div>
+          <div id="scoreboard">
+            <div id="medal"></div>
+            <div id="currentscore"></div>
+            <div id="highscore"></div>
+            <div id="replay"><img src="assets/replay.png" alt="replay"></div>
+          </div>
+        </div>
+      </div>
+      <div id="land" class="animated"><div id="debug"></div></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer">
+    <a href="https://www.dotgears.com/">original by dong nguyen</a>
+    <a href="https://nebezb.com/">recreated by nebez briefkani</a>
+    <a href="https://github.com/nebez/floppybird/">view source</a>
+  </div>
+
+  <!-- Debug Boxes -->
+  <div class="boundingbox" id="playerbox"></div>
+  <div class="boundingbox" id="pipebox"></div>
+
+  <!-- ✅ Kondor UMD (wallet integration) -->
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
+  
+  <!-- ✅ JS Modules (wallet first, game second) -->
+  <script type="module" src="js/wallet.js" defer></script>
+  <script type="module" src="js/main.js" defer></script>
+  <script type="module" src="js/leaderboard.js" defer></script>
+
+  <!-- Game Libraries (non-module) -->
+  <script src="js/jquery.min.js"></script>
+  <script src="js/jquery.transit.min.js"></script>
+  <script src="js/buzz.min.js"></script>
+</body>
+</html>

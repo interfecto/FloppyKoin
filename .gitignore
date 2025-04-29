@@ -1,0 +1,32 @@
+# Node modules
+node_modules/
+
+# Build artifacts
+build/
+*.wasm
+*.wat
+*.wasm.map
+
+# Development tools
+.cursor/
+
+# Koinos development files
+assembly/proto/
+assembly/*.ts
+assembly/tsconfig.json
+floppybird_contract/*/koinos/
+floppybird_contract/*/google/
+floppybird_contract/*/.eslint*
+floppybird_contract/*/as-pect.config.js
+floppybird_contract/*/asconfig.json
+floppybird_contract/*/node_modules/
+floppybird_contract/*/assembly/
+floppybird_contract/*/build/debug/*.wat
+floppybird_contract/*/build/debug/*.wasm.map
+
+# Keep the actual contract files that are needed for the game
+!js/
+!index.html
+!css/
+!floppybird_scoreboard_contract-abi.json
+!floppybird_contract/finaltrybird/build/debug/contract.wasm

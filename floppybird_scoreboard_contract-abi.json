@@ -1,0 +1,102 @@
+{
+  "methods": {
+    "submit_score": {
+      "input": "floppybird_scoreboard.submit_score_arguments",
+      "output": "floppybird_scoreboard.submit_score_result",
+      "description": "Submit a player score to the global leaderboard",
+      "entryPoint": 754077114,
+      "readOnly": false
+    },
+    "get_top_scores": {
+      "input": "floppybird_scoreboard.get_top_scores_arguments",
+      "output": "floppybird_scoreboard.get_top_scores_result",
+      "description": "Get the top scores from the global leaderboard",
+      "entryPoint": 654077115,
+      "readOnly": true
+    },
+    "get_player_score": {
+      "input": "floppybird_scoreboard.get_player_score_arguments",
+      "output": "floppybird_scoreboard.get_player_score_result",
+      "description": "Get a specific player's score",
+      "entryPoint": 554077116,
+      "readOnly": true
+    }
+  },
+  "types": {
+    "nested": {
+      "floppybird_scoreboard": {
+        "nested": {
+          "submit_score_arguments": {
+            "fields": {
+              "player": {
+                "type": "string",
+                "id": 1
+              },
+              "score": {
+                "type": "uint64",
+                "id": 2
+              }
+            }
+          },
+          "submit_score_result": {
+            "fields": {
+              "success": {
+                "type": "bool",
+                "id": 1
+              }
+            }
+          },
+          "get_top_scores_arguments": {
+            "fields": {
+              "limit": {
+                "type": "uint32",
+                "id": 1
+              }
+            }
+          },
+          "score_record": {
+            "fields": {
+              "player": {
+                "type": "string",
+                "id": 1
+              },
+              "score": {
+                "type": "uint64",
+                "id": 2
+              },
+              "timestamp": {
+                "type": "uint64",
+                "id": 3
+              }
+            }
+          },
+          "get_top_scores_result": {
+            "fields": {
+              "scores": {
+                "rule": "repeated",
+                "type": "score_record",
+                "id": 1
+              }
+            }
+          },
+          "get_player_score_arguments": {
+            "fields": {
+              "player": {
+                "type": "string",
+                "id": 1
+              }
+            }
+          },
+          "get_player_score_result": {
+            "fields": {
+              "score": {
+                "type": "score_record",
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} 

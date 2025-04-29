@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package nickname_registry;
+
+// Set nickname arguments
+message set_nickname_arguments {
+  string player = 1;    // Player address
+  string nickname = 2;  // The nickname to set
+}
+
+// Set nickname result
+message set_nickname_result {
+  bool success = 1;
+}
+
+// Get nickname arguments
+message get_nickname_arguments {
+  string player = 1;    // Player address to get nickname for
+}
+
+// Get nickname result
+message get_nickname_result {
+  string nickname = 1;  // The player's nickname (empty if not set)
+} 

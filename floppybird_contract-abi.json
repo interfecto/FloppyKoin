@@ -1,0 +1,35 @@
+{
+    "methods": {
+        "hello": {
+            "input": "floppybird_contract.hello_arguments",
+            "output": "floppybird_contract.hello_result",
+            "description": "Says Hello!",
+            "entryPoint": 754077114,
+            "readOnly": true
+        }
+    },
+    "types": {
+        "nested": {
+            "floppybird_contract": {
+                "nested": {
+                    "hello_arguments": {
+                        "fields": {
+                            "name": {
+                                "type": "string",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "hello_result": {
+                        "fields": {
+                            "value": {
+                                "type": "string",
+                                "id": 1
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
