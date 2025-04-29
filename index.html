@@ -160,26 +160,97 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Load Koinos libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/koilib@1.0.0/dist/koinos.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  <!-- Load Koinos libraries - USE SPECIFIC VERSION -->
+  <script src="https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
   
-  <!-- Verify libraries loaded correctly -->
+  <!-- Global DEBUGGING helper -->
   <script>
-    // Check if libraries loaded properly
+    // Contract configurations for direct debugging
+    const CONTRACT_ADDRESS = '15fgcbX1gEkzQfn8oErtaZFzfmBHQ7a4Aq';
+    
+    // Debug helper to call contract from console
+    window.debugContract = async function() {
+      try {
+        console.log('🔧 Debug helper initialized - testing contract connection');
+        
+        // Check if koilib is available
+        if (typeof koilib === 'undefined') {
+          console.error('❌ Koilib not found in global scope');
+          return false;
+        }
+        
+        // Check if kondor is available
+        if (typeof kondor === 'undefined') {
+          console.error('❌ Kondor not found in global scope');
+          return false;
+        }
+        
+        console.log('✅ Libraries detected, trying to connect to contract...');
+        
+        // Try to connect to Kondor
+        const accounts = await kondor.getAccounts();
+        if (!accounts || accounts.length === 0) {
+          console.error('❌ No accounts found in Kondor');
+          return false;
+        }
+        
+        const userAddress = accounts[0].address;
+        console.log('✅ Connected to account:', userAddress);
+        
+        // Create provider and contract
+        const provider = new koilib.Provider(['https://api.koinos.io']);
+        
+        // Create contract ABI (simplified for testing)
+        const abi = {
+          methods: {
+            get_top_scores: {
+              entry_point: 0x7d6a3628,
+              argument: "get_top_scores_arguments",
+              return: "get_top_scores_result",
+              read_only: true
+            }
+          }
+        };
+        
+        // Create contract
+        const contract = new koilib.Contract({
+          id: CONTRACT_ADDRESS,
+          abi: abi,
+          provider: provider
+        });
+        
+        // Try to call a read-only function
+        console.log('📞 Calling contract.get_top_scores()...');
+        const result = await contract.functions.get_top_scores({
+          limit: 5
+        });
+        
+        console.log('📊 Contract response:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Debug error:', error);
+        return false;
+      }
+    };
+    
+    // Verify libraries loaded correctly
     window.addEventListener('DOMContentLoaded', () => {
       console.log('🔍 Checking if Koinos libraries are loaded properly...');
-      if (typeof window.koilib === 'undefined') {
-        console.warn('⚠️ Koilib not detected in global scope, will use fallback');
+      
+      if (typeof koilib === 'undefined') {
+        console.error('❌ Koilib not detected in global scope');
       } else {
-        console.log('✅ Koilib successfully loaded');
+        console.log('✅ Koilib successfully loaded:', koilib.version || 'unknown version');
       }
       
-      if (typeof window.kondor === 'undefined') {
-        console.warn('⚠️ Kondor not detected, wallet features may be limited');
+      if (typeof kondor === 'undefined') {
+        console.error('❌ Kondor not detected');
       } else {
         console.log('✅ Kondor successfully loaded');
       }
+      
+      console.log('💡 TIP: Type debugContract() in the console to test the contract connection');
     });
   </script>
 </head>
