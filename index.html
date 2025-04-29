@@ -237,11 +237,13 @@
         try {
           await loadScript('https://cdn.jsdelivr.net/npm/koilib@6/dist/koinos.min.js');
           console.log('✅ Koilib loaded from primary source (v6)');
+          console.log('   Structure immediately after load:', window.koilib);
         } catch (e) {
           console.warn('⚠️ Primary koilib source failed, trying backup...');
           try {
             await loadScript('https://unpkg.com/koilib@latest/dist/koinos.min.js');
             console.log('✅ Koilib loaded from backup source');
+            console.log('   Structure immediately after backup load:', window.koilib);
           } catch (e2) {
             console.error('❌ Failed to load koilib from both sources');
           }
@@ -251,6 +253,7 @@
         try {
           await loadScript('https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js');
           console.log('✅ Kondor loaded');
+          console.log('   Structure immediately after load:', window.kondor);
         } catch (e) {
           console.warn('⚠️ Failed to load Kondor');
         }
