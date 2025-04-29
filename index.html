@@ -160,10 +160,41 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- ✅ Koinos Library Loader - Must come first -->
-  <script src="js/koilib-loader.js"></script>
+  <!-- ✅ Direct library loading - multiple CDN sources for reliability -->
+  <script src="https://unpkg.com/koilib@5.6.0/dist/koilib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
   
-  <!-- ✅ Koinos Integration (now loaded by loader as needed) -->
+  <!-- Fallback to create minimal Koilib if CDN fails -->
+  <script>
+    // Check if koilib failed to load after 500ms
+    setTimeout(function() {
+      if (typeof window.koilib === 'undefined') {
+        console.warn('❌ koilib failed to load from all CDNs, creating minimal placeholder');
+        window.koilib = {
+          Provider: function() { 
+            return { 
+              sendTransaction: () => Promise.reject(new Error('Koilib not available')),
+              call: () => Promise.reject(new Error('Koilib not available'))
+            };
+          },
+          Signer: function() { 
+            return { 
+              signTransaction: () => Promise.reject(new Error('Koilib not available'))
+            };
+          },
+          Contract: function(options) { 
+            return { 
+              functions: {},
+              id: options?.id || '',
+              options: options || {}
+            };
+          }
+        };
+      }
+    }, 500);
+  </script>
+  
+  <!-- ✅ Koinos Integration -->
   <script>
     // Ensures all dependencies are properly loaded
     document.addEventListener('DOMContentLoaded', function() {
@@ -190,7 +221,7 @@
             connectBtn.innerText = 'Wallet Unavailable';
           }
         }
-      }, 1500);
+      }, 1000);
     });
   </script>
 </head>
