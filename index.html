@@ -214,8 +214,8 @@
   <!-- Direct Koilib integration - using multiple fallback options -->
   <script>
     // Define koilib globally first so it's accessible everywhere
-    window.koilib = window.koilib || {};
-    window.kondor = window.kondor || {};
+    // window.koilib = window.koilib || {};
+    // window.kondor = window.kondor || {};
     
     // Function to load a script with a promise
     function loadScript(src) {
@@ -262,7 +262,7 @@
         console.log('⏳ Waiting for Koilib and Kondor to initialize...');
         let checks = 0;
         const maxChecks = 50; // Wait max 5 seconds (50 * 100ms)
-        while ((typeof koilib === 'undefined' || typeof koilib.Provider === 'undefined' || typeof kondor === 'undefined' || typeof kondor.getAccounts === 'undefined') && checks < maxChecks) {
+        while ((typeof Provider === 'undefined' || typeof kondor === 'undefined' || typeof kondor.getAccounts === 'undefined') && checks < maxChecks) {
           await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
           checks++;
         }
