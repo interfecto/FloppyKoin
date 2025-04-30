@@ -232,40 +232,66 @@
     async function loadLibraries() {
       try {
         console.log('⏳ Loading Koinos libraries...');
+        let koilibLoaded = false;
         
-        // Try loading koilib first (multiple sources for redundancy)
+        // Try loading koilib first
         try {
           await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js');
-          console.log('✅ Koilib loaded from CDN (v5.5.5)');
-          console.log('   Structure immediately after load:', window.koilib); 
-        } catch (e) {
-          console.error('❌ Failed to load koilib from CDN:', e);
-          
-          // Provide a better fallback - try another CDN
-          try {
-            await loadScript('https://unpkg.com/koilib@5.5.5/dist/koinos.min.js');
-            console.log('✅ Koilib loaded from fallback CDN (unpkg)');
-          } catch (e2) {
-            console.error('❌ Failed to load koilib from all sources');
-            alert('Failed to load Koinos library. Please check your internet connection and try again.');
+          // Check for window.koinos based on docs
+          if (typeof window.koinos !== 'undefined') {
+            console.log('✅ Koinos library loaded from CDN (v5.5.5) as window.koinos');
+            window.koilib = window.koinos; // Assign to koilib for compatibility
+            console.log('   Assigned to window.koilib:', window.koilib);
+            koilibLoaded = true;
+          } else {
+            console.warn('⚠️ Koinos library loaded from CDN, but window.koinos is undefined.');
           }
+        } catch (e) {
+          console.error('❌ Failed to load koilib from primary CDN:', e);
         }
         
-        // Then load Kondor
+        // Fallback CDN if primary failed
+        if (!koilibLoaded) {
+           try {
+             console.log('⏳ Trying fallback CDN for koilib...');
+             await loadScript('https://unpkg.com/koilib@5.5.5/dist/koinos.min.js');
+             if (typeof window.koinos !== 'undefined') {
+               console.log('✅ Koinos library loaded from fallback CDN (unpkg) as window.koinos');
+               window.koilib = window.koinos; // Assign for compatibility
+               console.log('   Assigned to window.koilib:', window.koilib);
+               koilibLoaded = true;
+             } else {
+               console.warn('⚠️ Koinos library loaded from fallback CDN, but window.koinos is undefined.');
+             }
+           } catch (e2) {
+             console.error('❌ Failed to load koilib from fallback CDN:', e2);
+           }
+        }
+        
+        if (!koilibLoaded) {
+           console.error('❌❌❌ Failed to load koilib library from all sources.');
+           alert('Critical Error: Could not load the Koinos library. Please check your connection and try refreshing.');
+           // Optionally stop further script loading
+           // return; 
+        }
+        
+        // Then load Kondor (seems to be working fine)
         try {
           await loadScript('https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js');
           console.log('✅ Kondor loaded');
-          console.log('   Structure immediately after load:', window.kondor);
+          // console.log('   Structure immediately after load:', window.kondor);
         } catch (e) {
           console.warn('⚠️ Failed to load Kondor');
+          // Kondor is essential, maybe alert user?
+          alert('Warning: Could not load the Kondor library. Wallet functionality might be affected.');
         }
         
         // --- WAIT FOR LIBRARIES TO INITIALIZE ---
-        console.log('⏳ Waiting for Koinos libraries to initialize...');
+        console.log('⏳ Waiting for essential libraries (kondor) to initialize...');
         let checks = 0;
         const maxChecks = 50; // Wait max 5 seconds (50 * 100ms)
         
-        // For our minimalist approach, we only really need kondor
+        // Only wait for kondor as koilib loading is handled above
         while (typeof kondor === 'undefined' && checks < maxChecks) {
           await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
           checks++;
@@ -273,15 +299,14 @@
 
         if (checks >= maxChecks) {
           console.error('❌ Timed out waiting for Kondor to initialize.');
-          // Alert the user about the issue
           alert('Unable to initialize the wallet connection. Please ensure you have the Kondor extension installed and try refreshing the page.');
           throw new Error('Kondor failed to initialize in time.');
         }
         
-        console.log(`✅ Libraries initialized after ${checks * 100}ms.`);
+        console.log(`✅ Kondor initialized after ${checks * 100}ms.`);
         // --- END WAIT ---
         
-        // Debug helper function
+        // Keep the debug helper (it will be updated separately)
         window.debugContract = async function() {
           try {
             console.log('🔧 Debug helper initialized - testing contract connection');
@@ -347,31 +372,33 @@
         };
         
         // Load our game scripts AFTER blockchain libraries are ready
-        console.log('🚀 Loading game scripts...'); // Added log
+        console.log('🚀 Loading game scripts...');
         await loadScript('js/wallet.js');
         await loadScript('js/leaderboard.js');
         await loadScript('js/main.js');
-        await loadScript('js/contract-debug.js'); // Load contract debug utilities
+        await loadScript('js/contract-debug.js'); 
         
         console.log('🎮 All scripts loaded successfully!');
         
         // Check libraries loaded properly
-        console.log('🔍 Checking if Koinos libraries are loaded properly...');
-        if (typeof koilib === 'undefined') {
-          console.error('❌ Koilib not detected in global scope');
+        console.log('🔍 Final check if Koinos/Kondor libraries are loaded...');
+        // Now check koilib AFTER potential assignment
+        if (typeof koilib === 'undefined' || typeof koilib.Contract === 'undefined') { 
+          console.error('❌ Koilib (or its Contract class) not detected in global scope after loading attempts.');
         } else {
-          console.log('✅ Koilib successfully loaded:', koilib.version || 'unknown version');
+          console.log('✅ Koilib object appears functional.');
         }
         
-        if (typeof kondor === 'undefined') {
-          console.error('❌ Kondor not detected');
+        if (typeof kondor === 'undefined' || typeof kondor.getAccounts === 'undefined') { 
+          console.error('❌ Kondor not detected or not functional.');
         } else {
-          console.log('✅ Kondor successfully loaded');
+          console.log('✅ Kondor appears functional.');
         }
         
-        console.log('💡 TIP: Type debugContract() in the console to test the contract connection');
+        console.log('💡 TIP: Run initContractDebug() in the console to test contract interaction.');
       } catch (error) {
-        console.error('❌ Error loading scripts:', error);
+        console.error('❌ Major error during script loading sequence:', error);
+        alert('An error occurred loading game resources. Please try refreshing.');
       }
     }
     

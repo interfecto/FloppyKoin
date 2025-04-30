@@ -97,48 +97,39 @@ async function initContractDebug() {
  */
 async function loadKoilibDirectly() {
   return new Promise((resolve, reject) => {
-    // Skip if koilib is already available
-    if (typeof koilib !== 'undefined' && koilib.Contract) {
-      console.log('✅ Koilib already available');
+    // Skip if koilib is already available and functional
+    if (typeof window.koilib !== 'undefined' && typeof window.koilib.Contract !== 'undefined') {
+      console.log('✅ Koilib already available globally');
       return resolve();
     }
     
-    console.log('⏳ Loading koilib directly...');
+    console.log('⏳ Loading koilib directly for debug utilities...');
     
-    // Create script element
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js';
     script.onload = () => {
-      // Check if koilib is defined and properly loaded
-      if (typeof koilib === 'undefined') {
-        console.error('❌ Koilib loaded but not defined in global scope');
-        // Try to access the library via a different method
-        fetch('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js')
-          .then(response => response.text())
-          .then(text => {
-            const patchedText = text + '\nwindow.koilib = koilib;'; // Force global assignment
-            const blob = new Blob([patchedText], {type: 'text/javascript'});
-            const url = URL.createObjectURL(blob);
-            const script2 = document.createElement('script');
-            script2.src = url;
-            script2.onload = () => {
-              console.log('✅ Koilib patched and loaded manually');
-              if (typeof koilib !== 'undefined') {
-                resolve();
-              } else {
-                reject(new Error('Failed to load koilib even with patching'));
-              }
-            };
-            script2.onerror = (e) => reject(e);
-            document.body.appendChild(script2);
-          })
-          .catch(reject);
-      } else {
-        console.log('✅ Koilib loaded successfully');
+      // Check if window.koinos exists (primary way based on docs)
+      if (typeof window.koinos !== 'undefined') {
+        console.log('✅ Debug: Koilib loaded as window.koinos');
+        window.koilib = window.koinos; // Assign for compatibility
+        console.log('✅ Debug: Assigned to window.koilib');
+        resolve();
+      } 
+      // Fallback check if it somehow loaded as window.koilib directly
+      else if (typeof window.koilib !== 'undefined' && typeof window.koilib.Contract !== 'undefined') {
+        console.log('✅ Debug: Koilib loaded directly as window.koilib (unexpected but okay)');
         resolve();
       }
+      // If neither exists, it failed
+      else {
+        console.error('❌ Debug: Failed to load koilib or assign it globally.');
+        reject(new Error('Koilib could not be loaded or found in window.koinos/window.koilib'));
+      }
     };
-    script.onerror = reject;
+    script.onerror = (err) => {
+        console.error('❌ Debug: Error loading koilib script:', err);
+        reject(err);
+    };
     document.body.appendChild(script);
   });
 }
