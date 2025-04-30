@@ -11,15 +11,54 @@
   <link href="css/reset.css" rel="stylesheet">
   <link href="css/main.css" rel="stylesheet">
 
-  <!-- Load CORE libraries directly in <head> -->
-  <!-- Try latest version from unpkg -->
-  <script src="https://unpkg.com/koilib@latest/dist/koinos.min.js"></script> 
-  <!-- Load Kondor from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
-  <!-- Load other libraries -->
+  <!-- Load jQuery first (needed by other scripts) -->
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
+
+  <!-- Load CORE libraries with proper error handling -->
+  <!-- Load koinos library with proper error handling and verbose console logging -->
+  <script>
+    console.log('Starting to load koinos library...');
+    
+    // Function to load script with better error handling
+    function loadScript(url, callback) {
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = url;
+      
+      script.onload = function() {
+        console.log(`Successfully loaded: ${url}`);
+        if (callback) callback(true);
+      };
+      
+      script.onerror = function() {
+        console.error(`Failed to load: ${url}`);
+        if (callback) callback(false);
+      };
+      
+      document.head.appendChild(script);
+    }
+    
+    // Try to load from local first, then from CDN if that fails
+    loadScript('js/koinos.min.js', function(success) {
+      if (!success) {
+        console.log('Falling back to CDN for koinos library...');
+        loadScript('https://unpkg.com/koilib/dist/koinos.min.js', function(success) {
+          if (!success) {
+            console.error('Both local and CDN loading failed for koinos library!');
+          } else {
+            console.log('CDN loading succeeded! window.koinos =', window.koinos);
+          }
+        });
+      } else {
+        console.log('Local loading succeeded! window.koinos =', window.koinos);
+      }
+    });
+  </script>
+  
+  <!-- Load Kondor from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
 
   <style>
     #wallet-bar {
@@ -236,37 +275,61 @@
     async function initializeGame() {
       console.log('DOM ready. Checking for core libraries...');
       
-      // Give scripts loaded in <head> a brief moment to execute/define globals
-      await new Promise(resolve => setTimeout(resolve, 150)); // Slightly longer wait
+      // Longer wait for scripts to initialize
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      let koinosLibReady = false;
-      let kondorReady = false;
-      
-      // Check for koinos (expecting it from unpkg script)
+      // First try checking for koinos global object
       if (typeof window.koinos !== 'undefined' && typeof window.koinos.Contract !== 'undefined') {
-        console.log('✅ window.koinos detected and seems functional (from unpkg).');
+        console.log('✅ window.koinos detected and seems functional!');
         window.koilib = window.koinos; // Assign for compatibility with existing code
-        koinosLibReady = true;
-      } else {
-        console.error('❌ window.koinos NOT detected or not functional!');
-        alert('Error: Koinos library failed to load properly. Please refresh or check the console.');
+      } 
+      // Then try checking for koilib global object
+      else if (typeof window.koilib !== 'undefined' && typeof window.koilib.Contract !== 'undefined') {
+        console.log('✅ window.koilib detected and seems functional!');
+        window.koinos = window.koilib; // Assign for compatibility
+      } 
+      else {
+        console.error('❌ Koinos library NOT detected or not functional!');
+        
+        // Last resort - try loading directly from CDN here
+        console.log('Attempting emergency direct load of koinos.min.js...');
+        try {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = "https://unpkg.com/koilib/dist/koinos.min.js";
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+          });
+          
+          console.log('Emergency load completed, waiting for initialization...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          if (typeof window.koinos !== 'undefined') {
+            console.log('✅ Emergency load successful!');
+            console.log('koinos object properties:', Object.keys(window.koinos));
+            window.koilib = window.koinos;
+          } else {
+            console.error('❌ Emergency load failed.');
+            console.log('Global objects available:', Object.keys(window).filter(k => /koi|kon/i.test(k)));
+            alert('Error: Koinos library failed to load properly. Please refresh or check the console.');
+            return;
+          }
+        } catch (e) {
+          console.error('❌ Emergency load threw an exception:', e);
+          alert('Error: Koinos library failed to load properly. Please refresh or check the console.');
+          return;
+        }
       }
       
       // Check for kondor (expecting it from CDN script)
       if (typeof window.kondor !== 'undefined' && typeof window.kondor.getAccounts === 'function') {
-          console.log('✅ window.kondor detected and seems functional.');
-          kondorReady = true;
+        console.log('✅ window.kondor detected and seems functional.');
       } else {
-          console.error('❌ window.kondor not detected or not functional!');
-          alert('Error: Kondor library failed to load. Wallet features may be disabled. Please refresh or check the console.');
+        console.error('❌ window.kondor not detected or not functional!');
+        alert('Error: Kondor library failed to load. Wallet features may be disabled. Please refresh or check the console.');
       }
       
-      // Only proceed if both libraries are ready
-      if (!koinosLibReady || !kondorReady) {
-          console.error('❌ Halting further script loading due to missing core libraries.');
-          return; 
-      }
-
       console.log('✅ Core libraries check passed. Loading game scripts sequentially...');
       
       try {
@@ -289,7 +352,6 @@
     
     // Initialize after the DOM is ready
     document.addEventListener('DOMContentLoaded', initializeGame);
-
   </script>
 </body>
 </html>
