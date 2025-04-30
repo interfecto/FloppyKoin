@@ -14,8 +14,25 @@
   <!-- Core Libraries -->
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery.transit.min.js"></script>
+  <script src="js/buzz.min.js"></script>
   <script src="js/koinos.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
+  
+  <!-- Debug script to check if koinos loaded -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Koinos check:', typeof window.koinos !== 'undefined' ? 'Available ✅' : 'Not available ❌');
+      if (typeof window.koinos === 'undefined') {
+        // Try loading directly from CDN as fallback
+        var script = document.createElement('script');
+        script.src = 'https://unpkg.com/koilib/dist/koinos.min.js';
+        script.onload = function() {
+          console.log('Koinos loaded from CDN fallback ✅');
+        };
+        document.head.appendChild(script);
+      }
+    });
+  </script>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
