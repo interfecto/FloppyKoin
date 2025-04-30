@@ -15,24 +15,76 @@
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
-  <script src="js/koinos.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
   
-  <!-- Debug script to check if koinos loaded -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('Koinos check:', typeof window.koinos !== 'undefined' ? 'Available ✅' : 'Not available ❌');
-      if (typeof window.koinos === 'undefined') {
-        // Try loading directly from CDN as fallback
-        var script = document.createElement('script');
-        script.src = 'https://unpkg.com/koilib/dist/koinos.min.js';
-        script.onload = function() {
-          console.log('Koinos loaded from CDN fallback ✅');
-        };
-        document.head.appendChild(script);
-      }
-    });
-  </script>
+  <!-- Blockchain Libraries -->
+  <script src="js/koinos.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  
+  <!-- Simple wallet CSS -->
+  <style>
+    #wallet-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: #92cd41;
+      border-bottom: 4px solid #76c442;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 0 10px;
+    }
+    #gamecontainer {
+      margin-top: 50px;
+    }
+    
+    /* Button styles */
+    #connect-btn, #submit-score-btn {
+      background-color: #f7d51d;
+      color: #333;
+      border: none;
+      border-bottom: 4px solid #e59400;
+      border-radius: 5px;
+      padding: 5px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      text-transform: uppercase;
+      margin: 0 8px;
+    }
+    
+    #connect-btn:hover, #submit-score-btn:hover {
+      background-color: #ffde4c;
+      transform: translateY(-2px);
+    }
+    
+    #connect-btn:active, #submit-score-btn:active {
+      border-bottom-width: 2px;
+      transform: translateY(2px);
+    }
+    
+    #connect-btn:disabled, #submit-score-btn:disabled {
+      background-color: #cccccc;
+      border-bottom-color: #999999;
+      color: #666666;
+      cursor: not-allowed;
+    }
+    
+    #wallet-address {
+      background-color: rgba(255, 255, 255, 0.3);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
 </head>
 <body>
   <!-- 🔐 Wallet UI -->
