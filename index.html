@@ -16,13 +16,8 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
 
-  <!-- Load CORE libraries with proper error handling -->
-  <script>
-    console.log('Starting to load koinos library...');
-  </script>
-  
-  <!-- Modern ES module approach for koinos library -->
-  <script type="module" src="js/koinos-adapter.js"></script>
+  <!-- Load Koinos library directly as recommended in the documentation -->
+  <script src="https://unpkg.com/koilib/dist/koinos.min.js"></script>
   
   <!-- Load Kondor from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
@@ -225,7 +220,7 @@
   
   <!-- Game Logic Scripts (Loaded after DOM ready and lib check) -->
   <script>
-    // Utility to load scripts sequentially and ensure execution order
+    // Function to load scripts sequentially and ensure execution order
     async function loadScriptsSequentially(sources) {
       for (const src of sources) {
         await new Promise((resolve, reject) => {
@@ -240,55 +235,23 @@
     
     // Function to run after DOM is ready 
     async function initializeGame() {
-      console.log('DOM ready. Checking for core libraries...');
+      console.log('DOM ready. Initializing game...');
       
-      // Wait for koinos library to be ready (through event or direct check)
+      // Check for required libraries
       if (typeof window.koinos === 'undefined') {
-        console.log('Waiting for koinos library to be ready...');
-        
-        // Create a promise that resolves when koinos-ready event fires or times out
-        await new Promise(resolve => {
-          // Handle the success case
-          window.addEventListener('koinos-ready', () => {
-            console.log('✅ Koinos library is ready (event)');
-            resolve(true);
-          });
-          
-          // Fallback with timeout
-          setTimeout(() => {
-            if (typeof window.koinos !== 'undefined') {
-              console.log('✅ Koinos library is ready (timeout check)');
-            } else {
-              console.error('❌ Koinos library NOT detected after timeout');
-            }
-            resolve(false);
-          }, 5000);
-        });
+        console.error('Warning: Koinos library not detected. Wallet features may be limited.');
       } else {
-        console.log('✅ Koinos library already available');
+        console.log('✅ Koinos library detected and ready');
       }
       
-      // Check for koinos
-      if (typeof window.koinos !== 'undefined') {
-        console.log('✅ window.koinos detected and seems functional!');
-        console.log('Available classes:', Object.keys(window.koinos));
+      if (typeof window.kondor === 'undefined') {
+        console.error('Warning: Kondor wallet not detected. Install Kondor extension for wallet connectivity.');
       } else {
-        console.error('❌ Koinos library NOT detected or not functional!');
-        // Game can continue without blockchain functionality
+        console.log('✅ Kondor wallet detected');
       }
       
-      // Check for kondor (expecting it from CDN script)
-      if (typeof window.kondor !== 'undefined' && typeof window.kondor.getAccounts === 'function') {
-        console.log('✅ window.kondor detected and seems functional.');
-      } else {
-        console.error('❌ window.kondor not detected or not functional!');
-        console.log('Wallet features may be disabled.');
-      }
-      
-      console.log('Loading game scripts sequentially...');
-      
+      // Load game scripts in order
       try {
-        // Load game-specific scripts IN ORDER
         await loadScriptsSequentially([
           'js/wallet.js', 
           'js/leaderboard.js',
@@ -297,8 +260,6 @@
         ]);
         
         console.log('🎮 All game scripts loaded successfully!');
-        console.log('💡 TIP: Run initContractDebug() in the console to test contract interaction.');
-
       } catch (error) {
         console.error('❌ Error loading game scripts:', error);
         alert('An error occurred loading game resources. Please try refreshing.');
