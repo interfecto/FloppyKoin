@@ -235,21 +235,20 @@
         
         // Try loading koilib first (multiple sources for redundancy)
         try {
-          // await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js'); // <<< CDN VERSION
-          await loadScript('js/koinos.min.js'); // <<< LOAD LOCAL COPY
-          // console.log('✅ Koilib loaded from primary source (v5.5.5 MINIFIED)'); 
-          console.log('✅ Koilib loaded from local file (v5.5.5 MINIFIED)'); // <<< Update log
+          await loadScript('https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js');
+          console.log('✅ Koilib loaded from CDN (v5.5.5)');
           console.log('   Structure immediately after load:', window.koilib); 
         } catch (e) {
-          // console.warn('⚠️ Primary koilib source failed, trying backup...'); // Remove backup logic for now
-          // try {
-          //   await loadScript('https://unpkg.com/koilib@latest/dist/koinos.min.js');
-          //   console.log('✅ Koilib loaded from backup source');
-          //   console.log('   Structure immediately after backup load:', window.koilib); 
-          // } catch (e2) {
-          //   console.error('❌ Failed to load koilib from both sources');
-          // }
-          console.error('❌ Failed to load local koinos.min.js:', e);
+          console.error('❌ Failed to load koilib from CDN:', e);
+          
+          // Provide a better fallback - try another CDN
+          try {
+            await loadScript('https://unpkg.com/koilib@5.5.5/dist/koinos.min.js');
+            console.log('✅ Koilib loaded from fallback CDN (unpkg)');
+          } catch (e2) {
+            console.error('❌ Failed to load koilib from all sources');
+            alert('Failed to load Koinos library. Please check your internet connection and try again.');
+          }
         }
         
         // Then load Kondor
@@ -262,20 +261,24 @@
         }
         
         // --- WAIT FOR LIBRARIES TO INITIALIZE ---
-        console.log('⏳ Waiting for Koilib and Kondor to initialize...');
+        console.log('⏳ Waiting for Koinos libraries to initialize...');
         let checks = 0;
         const maxChecks = 50; // Wait max 5 seconds (50 * 100ms)
-        while ((typeof Provider === 'undefined' || typeof kondor === 'undefined' || typeof kondor.getAccounts === 'undefined') && checks < maxChecks) {
+        
+        // For our minimalist approach, we only really need kondor
+        while (typeof kondor === 'undefined' && checks < maxChecks) {
           await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
           checks++;
         }
 
         if (checks >= maxChecks) {
-          console.error('❌ Timed out waiting for Koinos libraries to initialize.');
-          // Optionally, inform the user here
-          throw new Error('Koinos libraries failed to initialize in time.');
+          console.error('❌ Timed out waiting for Kondor to initialize.');
+          // Alert the user about the issue
+          alert('Unable to initialize the wallet connection. Please ensure you have the Kondor extension installed and try refreshing the page.');
+          throw new Error('Kondor failed to initialize in time.');
         }
-        console.log(`✅ Koinos libraries initialized after ${checks * 100}ms.`);
+        
+        console.log(`✅ Libraries initialized after ${checks * 100}ms.`);
         // --- END WAIT ---
         
         // Debug helper function
