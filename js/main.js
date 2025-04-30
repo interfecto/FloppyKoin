@@ -80,23 +80,30 @@ $(document).ready(function() {
     connectBtn.innerText = 'Connecting…';
     
     try {
-      await window.connectWallet();
+      // Simple wallet connection with minimal error handling
+      const address = await window.connectWallet();
+      
+      // Update UI if successful
       connectBtn.innerText = 'Connected';
       addressSpan.style.opacity = 1;
       submitBtn.disabled = false;
       
-      // Get player's previous score from blockchain
+      // Load player's previous score from local storage
       const playerScore = await window.getPlayerScore();
-      if (playerScore && playerScore.score > highscore) {
-        highscore = playerScore.score;
-        setCookie("highscore", highscore, 999);
+      if (playerScore && playerScore.score) {
+        const savedScore = parseInt(playerScore.score, 10);
+        if (!isNaN(savedScore) && savedScore > highscore) {
+          console.log(`Updating highscore from ${highscore} to ${savedScore}`);
+          highscore = savedScore;
+          setCookie("highscore", highscore, 999);
+        }
       }
       
       // Refresh leaderboard after successful connection
       window.refreshLeaderboard?.();
     } catch (err) {
-      console.error('Wallet connection failed', err);
-      alert('Could not connect to wallet - ' + (err.message || 'see console for details'));
+      console.error('❌ Wallet connection failed', err);
+      alert('Could not connect wallet: ' + (err.message || 'Unknown error'));
       connectBtn.innerText = 'Connect Wallet';
       connectBtn.disabled = false;
     }
