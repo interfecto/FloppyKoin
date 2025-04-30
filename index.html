@@ -10,10 +10,17 @@
   <!-- Stylesheets -->
   <link href="css/reset.css" rel="stylesheet">
   <link href="css/main.css" rel="stylesheet">
+
+  <!-- Load CORE libraries EARLY -->
+  <!-- Load LOCAL koinos library first -->
+  <script src="js/koinos.min.js"></script>
+  <!-- Load Kondor from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js"></script>
   
-  <!-- Load Koinos/Kondor libs directly for testing -->
-  <script src="https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.2.0/dist/kondor.min.js" defer></script>
+  <!-- Load other libraries needed before main game logic -->
+  <script src="js/jquery.min.js"></script>
+  <script src="js/jquery.transit.min.js"></script>
+  <script src="js/buzz.min.js"></script>
 
   <style>
     #wallet-bar {
@@ -211,147 +218,76 @@
   <div class="boundingbox" id="playerbox"></div>
   <div class="boundingbox" id="pipebox"></div>
   
-  <!-- Load all libraries -->
-  <script src="js/jquery.min.js"></script>
-  <script src="js/jquery.transit.min.js"></script>
-  <script src="js/buzz.min.js"></script>
-  
-  <!-- Direct Koilib integration - using multiple fallback options -->
+  <!-- Load all libraries REMOVED FROM HERE -->
+  <!-- Moved core libs to <head> -->
+
+  <!-- Game Logic Scripts -->
   <script>
-    // Define koilib globally first so it's accessible everywhere
-    // window.koilib = window.koilib || {};
-    // window.kondor = window.kondor || {};
-    
-    // Function to load a script with a promise (REMOVED FOR SIMPLER LOADING)
-    /*
+    // Utility to load remaining scripts sequentially
     function loadScript(src) {
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
+        // Ensure scripts are appended to body to run after initial libs
+        script.onload = () => { console.log(`Loaded: ${src}`); resolve(); };
+        script.onerror = (e) => { console.error(`Failed to load: ${src}`, e); reject(e); };
         document.body.appendChild(script);
       });
     }
-    */
     
-    // Load libraries sequentially (MODIFIED FOR SIMPLER LOADING)
-    async function loadLibraries() {
-      try {
-        console.log('⏳ Checking for Koinos/Kondor libraries (loaded via <script> tags)...');
-        
-        // Wait for libraries loaded via <script defer>
-        let checks = 0;
-        const maxChecks = 50; // Wait max 5 seconds
-        while ((typeof koinos === 'undefined' || typeof kondor === 'undefined') && checks < maxChecks) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            checks++;
-        }
-        
-        if (typeof koinos !== 'undefined') {
-            console.log('✅ window.koinos detected.');
-            window.koilib = window.koinos; // Assign for compatibility
-        } else {
-            console.error('❌ window.koinos still not detected after waiting!');
-            alert('Error: Koinos library failed to load. Please refresh.');
-            return; // Stop if koilib failed
-        }
-        
-        if (typeof kondor !== 'undefined') {
-            console.log('✅ window.kondor detected.');
-        } else {
-            console.error('❌ window.kondor not detected after waiting!');
-            alert('Error: Kondor library failed to load. Please refresh.');
-            return; // Stop if kondor failed
-        }
+    // Function to run after DOM is ready and core libs *should* be loaded
+    async function initializeGame() {
+      console.log('DOM ready. Checking for core libraries...');
+      
+      // Give scripts loaded in <head> a moment to execute
+      await new Promise(resolve => setTimeout(resolve, 100)); 
+      
+      let coreLibsReady = true;
+      
+      // Check for koinos (expecting it from local script)
+      if (typeof window.koinos !== 'undefined') {
+        console.log('✅ window.koinos detected (from local js/koinos.min.js).');
+        window.koilib = window.koinos; // Assign for compatibility
+      } else {
+        console.error('❌ window.koinos NOT detected from local js/koinos.min.js!');
+        alert('Error: Koinos library failed to initialize. Check console.');
+        coreLibsReady = false;
+      }
+      
+      // Check for kondor (expecting it from CDN script)
+      if (typeof window.kondor !== 'undefined' && typeof window.kondor.getAccounts === 'function') {
+          console.log('✅ window.kondor detected and seems functional.');
+      } else {
+          console.error('❌ window.kondor not detected or not functional!');
+          alert('Error: Kondor library failed to load. Wallet features disabled.');
+          coreLibsReady = false;
+      }
+      
+      if (!coreLibsReady) {
+          console.error('❌ Halting further script loading due to missing core libraries.');
+          return; // Don't load game scripts if core libs failed
+      }
 
-        console.log(`✅ Essential libraries checked after ${checks * 100}ms.`);
+      console.log('✅ Core libraries check passed. Loading game scripts...');
+      
+      try {
+        // Load game-specific scripts sequentially
+        await loadScript('js/wallet.js');
+        await loadScript('js/leaderboard.js');
+        await loadScript('js/main.js');
+        await loadScript('js/contract-debug.js'); 
         
-        // Keep the debug helper (it will be updated separately)
-        window.debugContract = async function() {
-          try {
-            console.log('🔧 Debug helper initialized - testing contract connection');
-            
-            // Check if koilib is available
-            if (typeof koilib === 'undefined') {
-              console.error('❌ Koilib not found in global scope');
-              return false;
-            }
-            
-            // Check if kondor is available
-            if (typeof kondor === 'undefined') {
-              console.error('❌ Kondor not found in global scope');
-              return false;
-            }
-            
-            console.log('✅ Libraries detected, trying to connect to contract...');
-            
-            // Try to connect to Kondor
-            const accounts = await kondor.getAccounts();
-            if (!accounts || accounts.length === 0) {
-              console.error('❌ No accounts found in Kondor');
-              return false;
-            }
-            
-            const userAddress = accounts[0].address;
-            console.log('✅ Connected to account:', userAddress);
-            
-            // Create provider and contract
-            const provider = new koilib.Provider(['https://api.koinos.io']);
-            
-            // Create contract ABI (simplified for testing)
-            const abi = {
-              methods: {
-                get_top_scores: {
-                  entry_point: 0x7d6a3628,
-                  argument: "get_top_scores_arguments",
-                  return: "get_top_scores_result",
-                  read_only: true
-                }
-              }
-            };
-            
-            // Create contract
-            const contract = new koilib.Contract({
-              id: '15fgcbX1gEkzQfn8oErtaZFzfmBHQ7a4Aq',
-              abi: abi,
-              provider: provider
-            });
-            
-            // Try to call a read-only function
-            console.log('📞 Calling contract.get_top_scores()...');
-            const result = await contract.functions.get_top_scores({
-              limit: 5
-            });
-            
-            console.log('📊 Contract response:', result);
-            return result;
-          } catch (error) {
-            console.error('❌ Debug error:', error);
-            return false;
-          }
-        };
-        
-        // Load our game scripts AFTER libraries are confirmed
-        console.log('🚀 Loading game scripts...');
-        // Use simpler direct loading for these too now
-        document.body.appendChild(Object.assign(document.createElement('script'), { src: 'js/wallet.js' }));
-        document.body.appendChild(Object.assign(document.createElement('script'), { src: 'js/leaderboard.js' }));
-        document.body.appendChild(Object.assign(document.createElement('script'), { src: 'js/main.js' }));
-        document.body.appendChild(Object.assign(document.createElement('script'), { src: 'js/contract-debug.js' })); 
-        
-        // Note: Script execution order isn't guaranteed here, might need adjustment later
-        console.log('🎮 Game scripts loading initiated...');
+        console.log('🎮 All game scripts loaded successfully!');
+        console.log('💡 TIP: Run initContractDebug() in the console to test contract interaction.');
 
       } catch (error) {
-        console.error('❌ Major error during script loading sequence:', error);
+        console.error('❌ Error loading game scripts:', error);
         alert('An error occurred loading game resources. Please try refreshing.');
       }
     }
     
-    // Start loading everything
-    // Wait for the DOM to be ready before trying to access libraries
-    document.addEventListener('DOMContentLoaded', loadLibraries);
+    // Initialize after the DOM is ready
+    document.addEventListener('DOMContentLoaded', initializeGame);
 
   </script>
 </body>

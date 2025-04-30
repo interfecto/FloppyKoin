@@ -34,10 +34,16 @@ const DEBUG_CONTRACT_ABI = {
 
 /**
  * Initialize the debug contract interaction
- * This loads koilib directly rather than relying on window.koilib
+ * This now relies on koilib being loaded by index.html
  */
 async function initContractDebug() {
   console.log('🔧 Initializing contract debug utilities...');
+  
+  // Check if koilib (assigned from koinos) is available globally
+  if (typeof koilib === 'undefined' || typeof koilib.Contract === 'undefined') {
+      console.error('❌ koilib object not found or missing Contract class. Was js/koinos.min.js loaded correctly?');
+      return false;
+  }
   
   try {
     // Check if kondor is available
@@ -45,9 +51,6 @@ async function initContractDebug() {
       console.error('❌ Kondor not found. Please install the Kondor extension.');
       return false;
     }
-
-    // Load koilib directly
-    await loadKoilibDirectly();
 
     // Get accounts from Kondor
     const accounts = await kondor.getAccounts();
@@ -93,45 +96,17 @@ async function initContractDebug() {
 }
 
 /**
- * Load koilib directly into the global scope
+ * Load koilib directly into the global scope - REMOVED/SIMPLIFIED
+ * Now just verifies if it was loaded by index.html
  */
 async function loadKoilibDirectly() {
-  return new Promise((resolve, reject) => {
-    // Skip if koilib is already available and functional
     if (typeof window.koilib !== 'undefined' && typeof window.koilib.Contract !== 'undefined') {
-      console.log('✅ Koilib already available globally');
-      return resolve();
+      console.log('✅ Debug: Koilib confirmed available globally.');
+      return Promise.resolve();
+    } else {
+      console.error('❌ Debug: koilib object not found. Ensure index.html loaded it correctly.');
+      return Promise.reject(new Error('Koilib was not loaded by the main page.'));
     }
-    
-    console.log('⏳ Loading koilib directly for debug utilities...');
-    
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/koilib@5.5.5/dist/koinos.min.js';
-    script.onload = () => {
-      // Check if window.koinos exists (primary way based on docs)
-      if (typeof window.koinos !== 'undefined') {
-        console.log('✅ Debug: Koilib loaded as window.koinos');
-        window.koilib = window.koinos; // Assign for compatibility
-        console.log('✅ Debug: Assigned to window.koilib');
-        resolve();
-      } 
-      // Fallback check if it somehow loaded as window.koilib directly
-      else if (typeof window.koilib !== 'undefined' && typeof window.koilib.Contract !== 'undefined') {
-        console.log('✅ Debug: Koilib loaded directly as window.koilib (unexpected but okay)');
-        resolve();
-      }
-      // If neither exists, it failed
-      else {
-        console.error('❌ Debug: Failed to load koilib or assign it globally.');
-        reject(new Error('Koilib could not be loaded or found in window.koinos/window.koilib'));
-      }
-    };
-    script.onerror = (err) => {
-        console.error('❌ Debug: Error loading koilib script:', err);
-        reject(err);
-    };
-    document.body.appendChild(script);
-  });
 }
 
 /**
