@@ -17,44 +17,48 @@
   <script src="js/buzz.min.js"></script>
 
   <!-- Load CORE libraries with proper error handling -->
-  <!-- Load koinos library with proper error handling and verbose console logging -->
   <script>
     console.log('Starting to load koinos library...');
     
-    // Function to load script with better error handling
-    function loadScript(url, callback) {
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.src = url;
-      
-      script.onload = function() {
-        console.log(`Successfully loaded: ${url}`);
-        if (callback) callback(true);
-      };
-      
-      script.onerror = function() {
-        console.error(`Failed to load: ${url}`);
-        if (callback) callback(false);
-      };
-      
-      document.head.appendChild(script);
-    }
+    // First try to use plain script include - most reliable method
+    document.write('<script src="js/koinos.js" type="text/javascript"><\/script>');
     
-    // Try to load from local first, then from CDN if that fails
-    loadScript('js/koinos.min.js', function(success) {
-      if (!success) {
-        console.log('Falling back to CDN for koinos library...');
-        loadScript('https://unpkg.com/koilib/dist/koinos.min.js', function(success) {
+    // After short delay, verify the library loaded correctly
+    setTimeout(function() {
+      if (typeof window.koinos === 'undefined' || typeof window.koinos.Contract === 'undefined') {
+        console.warn('Direct script include failed, trying dynamic loading...');
+        
+        // Function to load script with better error handling
+        function loadScript(url, callback) {
+          const script = document.createElement('script');
+          script.type = 'text/javascript';
+          script.src = url;
+          
+          script.onload = function() {
+            console.log(`Successfully loaded: ${url}`);
+            if (callback) callback(true);
+          };
+          
+          script.onerror = function() {
+            console.error(`Failed to load: ${url}`);
+            if (callback) callback(false);
+          };
+          
+          document.head.appendChild(script);
+        }
+        
+        // Try to load from CDN directly
+        loadScript('https://unpkg.com/koilib/dist/koinos.js', function(success) {
           if (!success) {
-            console.error('Both local and CDN loading failed for koinos library!');
+            console.error('CDN loading failed for koinos library!');
           } else {
-            console.log('CDN loading succeeded! window.koinos =', window.koinos);
+            console.log('CDN loading succeeded, koinos available:', !!window.koinos);
           }
         });
       } else {
-        console.log('Local loading succeeded! window.koinos =', window.koinos);
+        console.log('✅ Direct script include worked! window.koinos is available');
       }
-    });
+    }, 500);
   </script>
   
   <!-- Load Kondor from CDN -->
