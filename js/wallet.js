@@ -1,4 +1,4 @@
-// js/wallet.js - Wallet integration with blockchain and local fallback (v10.6)
+// js/wallet.js - Wallet integration with simplified blockchain access (v10.7)
 
 let userAddress;
 let provider;
@@ -7,73 +7,19 @@ let scoreboardContract;
 // Contract address on Koinos blockchain
 const SCOREBOARD_CONTRACT_ADDRESS = '15fgcbX1gEkzQfn8oErtaZFzfmBHQ7a4Aq';
 
-// Define the contract ABI to interact with our scoreboard contract
-const SCOREBOARD_ABI = {
+// Simple ABI - just method names and entry points
+const SCOREBOARD_SIMPLE_ABI = {
   methods: {
     submit_score: {
-      entry_point: 0x5e812eb5,
-      argument: "floppybird_scoreboard.submit_score_arguments",
-      return: "floppybird_scoreboard.submit_score_result"
+      entry_point: 0x5e812eb5
     },
     get_player_score: {
       entry_point: 0x9b549ace,
-      argument: "floppybird_scoreboard.get_player_score_arguments",
-      return: "floppybird_scoreboard.get_player_score_result",
       read_only: true
     },
     get_top_scores: {
       entry_point: 0x7d6a3628,
-      argument: "floppybird_scoreboard.get_top_scores_arguments",
-      return: "floppybird_scoreboard.get_top_scores_result",
       read_only: true
-    }
-  },
-  types: {
-    nested: {
-      floppybird_scoreboard: {
-        nested: {
-          submit_score_arguments: {
-            fields: {
-              player: { type: "string", id: 1 },
-              score: { type: "uint64", id: 2 },
-              nickname: { type: "string", id: 3 }
-            }
-          },
-          submit_score_result: {
-            fields: {
-              success: { type: "bool", id: 1 }
-            }
-          },
-          get_player_score_arguments: {
-            fields: {
-              player: { type: "string", id: 1 }
-            }
-          },
-          get_player_score_result: {
-            fields: {
-              score: { type: "score_record", id: 1 }
-            }
-          },
-          get_top_scores_arguments: {
-            fields: {
-              limit: { type: "uint32", id: 1 }
-            }
-          },
-          get_top_scores_result: {
-            fields: {
-              scores: { rule: "repeated", type: "score_record", id: 1 }
-            }
-          },
-          score_record: {
-            fields: {
-              player: { type: "string", id: 1 },
-              score: { type: "uint64", id: 2 },
-              nickname: { type: "string", id: 3 },
-              timestamp: { type: "uint64", id: 4 }
-            }
-          }
-        }
-      }
     }
   }
 };
@@ -148,10 +94,10 @@ function initializeContract() {
     // Get signer for the connected address
     const signer = window.kondor.getSigner(userAddress);
     
-    // Create the contract instance
+    // Create the contract instance with minimal ABI
     scoreboardContract = new window.koinos.Contract({
       id: SCOREBOARD_CONTRACT_ADDRESS,
-      abi: SCOREBOARD_ABI,
+      abi: SCOREBOARD_SIMPLE_ABI,
       provider: provider,
       signer: signer
     });
@@ -161,6 +107,80 @@ function initializeContract() {
   } catch (error) {
     console.error('❌ Failed to initialize contract:', error);
     return false;
+  }
+}
+
+/**
+ * Direct contract call with simplified serialization
+ */
+async function directContractCall(methodName, args, readOnly = true) {
+  if (!provider) {
+    console.error('Provider not initialized');
+    return null;
+  }
+  
+  try {
+    // Get entry point from ABI
+    const entryPoint = SCOREBOARD_SIMPLE_ABI.methods[methodName]?.entry_point;
+    if (!entryPoint) {
+      throw new Error(`Unknown method: ${methodName}`);
+    }
+    
+    // Convert args to hex string
+    const argsHex = window.koinos.utils.toHexString(
+      new TextEncoder().encode(JSON.stringify(args))
+    );
+    
+    // Create contract call operation
+    const callContract = {
+      contract_id: SCOREBOARD_CONTRACT_ADDRESS,
+      entry_point: entryPoint,
+      args: argsHex
+    };
+    
+    if (readOnly) {
+      // Use readContract for read-only operations
+      const result = await provider.readContract(callContract);
+      
+      if (result && result.result) {
+        // Try to parse the result if it's JSON
+        try {
+          return JSON.parse(new TextDecoder().decode(
+            window.koinos.utils.toUint8Array(result.result)
+          ));
+        } catch (e) {
+          return result.result;
+        }
+      }
+      return null;
+    } else {
+      // For write operations, create transaction with signer
+      const signer = window.kondor.getSigner(userAddress);
+      
+      if (!signer) {
+        throw new Error('Signer not available');
+      }
+      
+      // Create transaction
+      const transaction = new window.koinos.Transaction({
+        signer: signer,
+        provider: provider
+      });
+      
+      // Add operation
+      transaction.pushOperation({
+        call_contract: callContract
+      });
+      
+      // Send and wait for the transaction
+      await transaction.send();
+      await transaction.wait();
+      
+      return { success: true };
+    }
+  } catch (error) {
+    console.error(`Contract call error (${methodName}):`, error);
+    return null;
   }
 }
 
@@ -182,8 +202,8 @@ async function sendScore(score) {
       console.log('📝 Score saved locally:', score);
     }
     
-    // If we have a contract initialized, try to send score to blockchain
-    if (scoreboardContract) {
+    // If we have blockchain access, try to submit
+    if (provider) {
       console.log('🌐 Submitting score to blockchain:', score);
       document.getElementById('submit-score-btn').disabled = true;
       document.getElementById('submit-score-btn').textContent = 'Submitting...';
@@ -191,32 +211,26 @@ async function sendScore(score) {
       const nickname = localStorage.getItem('playerNickname') || 'Player';
       
       try {
-        // Try the blockchain transaction
-        const result = await scoreboardContract.functions.submit_score({
+        // Try direct method first
+        const result = await directContractCall('submit_score', {
           player: userAddress,
           score: score,
           nickname: nickname
-        });
+        }, false); // false = not read-only
         
-        console.log('🔄 Blockchain transaction result:', result);
-        
-        // Wait for transaction if needed
-        if (result.transaction) {
-          console.log('⏳ Waiting for transaction confirmation...');
-          await result.transaction.wait();
-          console.log('✅ Transaction confirmed');
+        if (result && result.success) {
+          console.log('✅ Score submitted to blockchain successfully');
+          document.getElementById('submit-score-btn').textContent = 'Submitted!';
+          
+          setTimeout(() => {
+            document.getElementById('submit-score-btn').disabled = false;
+            document.getElementById('submit-score-btn').textContent = 'Submit Score';
+          }, 2000);
+          
+          return true;
+        } else {
+          throw new Error('Submission failed');
         }
-        
-        console.log('✅ Score submitted to blockchain successfully');
-        document.getElementById('submit-score-btn').textContent = 'Submitted!';
-        
-        // Reset button after delay
-        setTimeout(() => {
-          document.getElementById('submit-score-btn').disabled = false;
-          document.getElementById('submit-score-btn').textContent = 'Submit Score';
-        }, 2000);
-        
-        return true;
       } catch (blockchainError) {
         console.error('⚠️ Blockchain submission failed:', blockchainError);
         
@@ -224,7 +238,6 @@ async function sendScore(score) {
         alert('⚠️ Could not submit to blockchain, but score was saved locally. ' + 
               (blockchainError.message || 'Unknown error'));
         
-        // Reset button
         document.getElementById('submit-score-btn').disabled = false;
         document.getElementById('submit-score-btn').textContent = 'Submit Score';
         
@@ -232,7 +245,7 @@ async function sendScore(score) {
       }
     } else {
       // No blockchain connection available, already saved locally
-      console.log('⚠️ No blockchain contract available, using local storage only');
+      console.log('⚠️ No blockchain access available, using local storage only');
       alert('✅ Score saved locally (blockchain not available)');
       return localSaved;
     }
@@ -240,7 +253,6 @@ async function sendScore(score) {
     console.error('🔗 sendScore failed', e);
     alert('❌ Score submission failed: ' + (e.message || JSON.stringify(e)));
     
-    // Reset button if needed
     document.getElementById('submit-score-btn').disabled = false;
     document.getElementById('submit-score-btn').textContent = 'Submit Score';
     
@@ -256,16 +268,18 @@ async function getTopScores(limit = 10) {
 
   try {
     // Try to get scores from blockchain first
-    if (scoreboardContract) {
+    if (provider) {
       try {
         console.log('🌐 Getting top scores from blockchain');
-        const result = await scoreboardContract.functions.get_top_scores({
+        
+        // Use direct contract call
+        const result = await directContractCall('get_top_scores', {
           limit: limit
         });
         
-        if (result && result.result && Array.isArray(result.result.scores)) {
-          console.log('✅ Got scores from blockchain:', result.result.scores.length);
-          return result.result.scores;
+        if (result && Array.isArray(result.scores)) {
+          console.log('✅ Got scores from blockchain:', result.scores.length);
+          return result.scores;
         }
       } catch (blockchainError) {
         console.error('⚠️ Failed to get scores from blockchain:', blockchainError);
@@ -295,16 +309,18 @@ async function getPlayerScore(playerAddress = userAddress) {
 
   try {
     // Try blockchain first
-    if (scoreboardContract) {
+    if (provider) {
       try {
         console.log('🌐 Getting player score from blockchain');
-        const result = await scoreboardContract.functions.get_player_score({
+        
+        // Use direct contract call
+        const result = await directContractCall('get_player_score', {
           player: playerAddress
         });
         
-        if (result && result.result && result.result.score) {
-          console.log('✅ Got score from blockchain');
-          return result.result.score;
+        if (result && result.score) {
+          console.log('✅ Got score from blockchain:', result.score);
+          return result.score;
         }
       } catch (blockchainError) {
         console.error('⚠️ Failed to get score from blockchain:', blockchainError);
@@ -409,5 +425,8 @@ window.getTopScores = getTopScores;
 window.getPlayerScore = getPlayerScore;
 window.setPlayerNickname = setPlayerNickname;
 
+// Add the direct contract call for debugging
+window.directContractCall = directContractCall;
+
 // Log that wallet.js has loaded successfully
-console.log('💼 Wallet.js loaded successfully - v10.6 with blockchain integration + local fallback'); 
+console.log('💼 Wallet.js loaded successfully - v10.7 with simplified blockchain integration'); 
