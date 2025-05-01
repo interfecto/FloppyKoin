@@ -1,4 +1,4 @@
-// js/wallet.js - Wallet integration with blockchain and local fallback (v10.5)
+// js/wallet.js - Wallet integration with blockchain and local fallback (v10.6)
 
 let userAddress;
 let provider;
@@ -12,63 +12,67 @@ const SCOREBOARD_ABI = {
   methods: {
     submit_score: {
       entry_point: 0x5e812eb5,
-      argument: "submit_score_arguments",
-      return: "submit_score_result"
+      argument: "floppybird_scoreboard.submit_score_arguments",
+      return: "floppybird_scoreboard.submit_score_result"
     },
     get_player_score: {
       entry_point: 0x9b549ace,
-      argument: "get_player_score_arguments",
-      return: "get_player_score_result",
+      argument: "floppybird_scoreboard.get_player_score_arguments",
+      return: "floppybird_scoreboard.get_player_score_result",
       read_only: true
     },
     get_top_scores: {
       entry_point: 0x7d6a3628,
-      argument: "get_top_scores_arguments",
-      return: "get_top_scores_result",
+      argument: "floppybird_scoreboard.get_top_scores_arguments",
+      return: "floppybird_scoreboard.get_top_scores_result",
       read_only: true
     }
   },
   types: {
-    submit_score_arguments: {
-      fields: {
-        player: { type: "string" },
-        score: { type: "uint64" },
-        nickname: { type: "string" }
-      }
-    },
-    submit_score_result: {
-      fields: {
-        success: { type: "bool" }
-      }
-    },
-    get_player_score_arguments: {
-      fields: {
-        player: { type: "string" }
-      }
-    },
-    get_player_score_result: {
-      fields: {
-        score: { type: "uint64" },
-        nickname: { type: "string" },
-        timestamp: { type: "uint64" }
-      }
-    },
-    get_top_scores_arguments: {
-      fields: {
-        limit: { type: "uint32" }
-      }
-    },
-    get_top_scores_result: {
-      fields: {
-        scores: { rule: "repeated", type: "score_entry" }
-      }
-    },
-    score_entry: {
-      fields: {
-        player: { type: "string" },
-        score: { type: "uint64" },
-        nickname: { type: "string" },
-        timestamp: { type: "uint64" }
+    nested: {
+      floppybird_scoreboard: {
+        nested: {
+          submit_score_arguments: {
+            fields: {
+              player: { type: "string", id: 1 },
+              score: { type: "uint64", id: 2 },
+              nickname: { type: "string", id: 3 }
+            }
+          },
+          submit_score_result: {
+            fields: {
+              success: { type: "bool", id: 1 }
+            }
+          },
+          get_player_score_arguments: {
+            fields: {
+              player: { type: "string", id: 1 }
+            }
+          },
+          get_player_score_result: {
+            fields: {
+              score: { type: "score_record", id: 1 }
+            }
+          },
+          get_top_scores_arguments: {
+            fields: {
+              limit: { type: "uint32", id: 1 }
+            }
+          },
+          get_top_scores_result: {
+            fields: {
+              scores: { rule: "repeated", type: "score_record", id: 1 }
+            }
+          },
+          score_record: {
+            fields: {
+              player: { type: "string", id: 1 },
+              score: { type: "uint64", id: 2 },
+              nickname: { type: "string", id: 3 },
+              timestamp: { type: "uint64", id: 4 }
+            }
+          }
+        }
       }
     }
   }
@@ -298,14 +302,9 @@ async function getPlayerScore(playerAddress = userAddress) {
           player: playerAddress
         });
         
-        if (result && result.result) {
+        if (result && result.result && result.result.score) {
           console.log('✅ Got score from blockchain');
-          return {
-            player: playerAddress,
-            score: result.result.score,
-            nickname: result.result.nickname,
-            timestamp: result.result.timestamp
-          };
+          return result.result.score;
         }
       } catch (blockchainError) {
         console.error('⚠️ Failed to get score from blockchain:', blockchainError);
@@ -411,4 +410,4 @@ window.getPlayerScore = getPlayerScore;
 window.setPlayerNickname = setPlayerNickname;
 
 // Log that wallet.js has loaded successfully
-console.log('💼 Wallet.js loaded successfully - v10.5 with blockchain integration + local fallback'); 
+console.log('💼 Wallet.js loaded successfully - v10.6 with blockchain integration + local fallback'); 
