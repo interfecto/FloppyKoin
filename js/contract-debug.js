@@ -1,80 +1,11 @@
 // contract-debug.js - Console utilities for contract interaction
+// Version 10.4 - Simplified to work with wallet.js mock implementation
 
 // Global variables to store contract state
-let debugProvider;
-let debugSigner;
-let debugContract;
 let debugUserAddress;
 
 // Contract address on Koinos blockchain
 const DEBUG_CONTRACT_ADDRESS = '15fgcbX1gEkzQfn8oErtaZFzfmBHQ7a4Aq';
-
-// Simplified contract ABI for testing
-const DEBUG_CONTRACT_ABI = {
-  methods: {
-    submit_score: {
-      entry_point: 0x5e812eb5,
-      argument: "submit_score_arguments",
-      return: "submit_score_result"
-    },
-    get_player_score: {
-      entry_point: 0x9b549ace,
-      argument: "get_player_score_arguments",
-      return: "get_player_score_result",
-      read_only: true
-    },
-    get_top_scores: {
-      entry_point: 0x7d6a3628,
-      argument: "get_top_scores_arguments",
-      return: "get_top_scores_result",
-      read_only: true
-    }
-  },
-  types: {
-    submit_score_arguments: {
-      fields: {
-        player: { type: "string" },
-        score: { type: "uint64" },
-        nickname: { type: "string" }
-      }
-    },
-    submit_score_result: {
-      fields: {
-        success: { type: "bool" }
-      }
-    },
-    get_player_score_arguments: {
-      fields: {
-        player: { type: "string" }
-      }
-    },
-    get_player_score_result: {
-      fields: {
-        score: { type: "uint64" },
-        nickname: { type: "string" },
-        timestamp: { type: "uint64" }
-      }
-    },
-    get_top_scores_arguments: {
-      fields: {
-        limit: { type: "uint32" }
-      }
-    },
-    get_top_scores_result: {
-      fields: {
-        scores: { rule: "repeated", type: "score_entry" }
-      }
-    },
-    score_entry: {
-      fields: {
-        player: { type: "string" },
-        score: { type: "uint64" },
-        nickname: { type: "string" },
-        timestamp: { type: "uint64" }
-      }
-    }
-  }
-};
 
 /**
  * Initialize the debug contract interaction
@@ -83,273 +14,85 @@ const DEBUG_CONTRACT_ABI = {
 async function initContractDebug() {
   console.log('🔧 Initializing contract debug utilities...');
   
-  // Check if wallet.js has already set up contracts
+  // Check if wallet.js has already set up functions
   if (typeof window.getPlayerScore === 'function' && 
       typeof window.getTopScores === 'function' && 
       typeof window.sendScore === 'function') {
-    console.log('✅ Using wallet.js integration for contract functions');
+    console.log('✅ Using wallet.js functions for debugging');
     
-    // Expose wallet.js functions as debug aliases
+    // Get current connected address if available
+    if (typeof window.connectWallet === 'function') {
+      try {
+        debugUserAddress = await window.connectWallet();
+      } catch (e) {
+        console.log('ℹ️ No wallet connected yet');
+      }
+    }
+    
+    // Expose global debug functions that use wallet.js functions
     window.getPlayerScoreFromChain = window.getPlayerScore;
     window.getTopScoresFromChain = window.getTopScores;
     window.sendScoreToChain = window.sendScore;
     
-    console.log('✅ Debug utilities ready and connected to wallet.js!');
+    console.log('✅ Debug utilities ready and using wallet.js!');
     return true;
   }
   
-  // Fall back to direct koinos initialization if wallet.js isn't handling it
-  console.log('⚠️ wallet.js functions not found, initializing direct contract connection');
-  
-  // Check if koilib (assigned from koinos) is available globally
-  if (typeof window.koinos === 'undefined' || typeof window.koinos.Contract === 'undefined') {
-    console.error('❌ koilib object not found or missing Contract class. Was js/koinos.min.js loaded correctly?');
-    return false;
-  }
-  
-  try {
-    // Check if kondor is available
-    if (typeof window.kondor === 'undefined') {
-      console.error('❌ Kondor not found. Please install the Kondor extension.');
-      return false;
-    }
-
-    // Get accounts from Kondor
-    const accounts = await window.kondor.getAccounts();
-    if (!accounts || accounts.length === 0) {
-      console.error('❌ No accounts found in Kondor. Please unlock Kondor and try again.');
-      return false;
-    }
-
-    debugUserAddress = accounts[0];
-    console.log('✅ Connected as', debugUserAddress);
-
-    // Get provider from Kondor
-    debugProvider = window.kondor.getProvider();
-    console.log('✅ Provider obtained');
-
-    // Get signer from Kondor
-    debugSigner = window.kondor.getSigner(debugUserAddress);
-    if (!debugSigner) {
-      console.error('❌ Failed to get signer from Kondor');
-      return false;
-    }
-    console.log('✅ Signer obtained');
-
-    // Initialize contract using koilib
-    debugContract = new window.koinos.Contract({
-      id: DEBUG_CONTRACT_ADDRESS,
-      abi: DEBUG_CONTRACT_ABI,
-      provider: debugProvider,
-      signer: debugSigner
-    });
-    
-    console.log('✅ Contract initialized for address:', DEBUG_CONTRACT_ADDRESS);
-    console.log('✅ Debug utilities ready! You can now use:');
-    console.log('   - getPlayerScoreFromChain(address) - Get a player\'s score');
-    console.log('   - getTopScoresFromChain(limit) - Get top scores');
-    console.log('   - sendScoreToChain(score) - Submit your score');
-    
-    // Make wallet.js compatible functions available
-    window.getPlayerScore = getPlayerScoreFromChain;
-    window.getTopScores = getTopScoresFromChain;
-    window.sendScore = sendScoreToChain;
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Contract debug initialization failed:', error);
-    return false;
-  }
+  console.error('❌ wallet.js functions not found');
+  return false;
 }
 
 /**
- * Get a player's score from the blockchain
+ * Output stats about the current localStorage data
  */
-async function getPlayerScoreFromChain(playerAddress = debugUserAddress) {
-  console.log('🏆 getPlayerScoreFromChain called for', playerAddress);
-
-  if (!playerAddress) {
-    console.error('❌ No player address provided');
-    return null;
-  }
-
-  if (!debugContract) {
-    console.error('❌ Contract not initialized. Please run initContractDebug() first.');
-    return null;
-  }
-
+function showLocalStats() {
   try {
-    // Call the contract read function
-    const result = await debugContract.functions.get_player_score({
-      player: playerAddress
-    });
+    const scores = JSON.parse(localStorage.getItem('floppykoin_scores') || '{}');
+    const players = Object.keys(scores);
     
-    if (result && result.result) {
-      console.log('✅ Score retrieved:', result.result);
-      return {
-        player: playerAddress,
-        score: result.result.score,
-        nickname: result.result.nickname,
-        timestamp: result.result.timestamp
-      };
-    } else {
-      console.log('ℹ️ No score found for this player');
-      return null;
-    }
-  } catch (error) {
-    console.error('❌ Error getting player score:', error);
-    return getScoreFromLocalStorage(playerAddress);
-  }
-}
-
-/**
- * Get top scores from the blockchain
- */
-async function getTopScoresFromChain(limit = 10) {
-  console.log('📊 getTopScoresFromChain called with limit:', limit);
-
-  if (!debugContract) {
-    console.error('❌ Contract not initialized. Please run initContractDebug() first.');
-    return [];
-  }
-
-  try {
-    // Call the contract read function
-    const result = await debugContract.functions.get_top_scores({
-      limit: parseInt(limit, 10)
-    });
+    console.log('📊 Local Storage Stats:');
+    console.log(`Total players: ${players.length}`);
     
-    if (result && result.result && Array.isArray(result.result.scores)) {
-      console.log('✅ Top scores retrieved:', result.result.scores);
-      return result.result.scores;
-    } else {
-      console.log('ℹ️ No top scores found or invalid response format');
-      return [];
-    }
-  } catch (error) {
-    console.error('❌ Error getting top scores:', error);
-    return getTopScoresFromLocalStorage(limit);
-  }
-}
-
-/**
- * Send a score to the blockchain
- */
-async function sendScoreToChain(score) {
-  console.log('📝 sendScoreToChain called with score:', score);
-
-  if (!debugUserAddress) {
-    console.error('❌ No user address. Please run initContractDebug() first.');
-    return false;
-  }
-
-  if (!debugContract) {
-    console.error('❌ Contract not initialized. Please run initContractDebug() first.');
-    return false;
-  }
-
-  try {
-    const nickname = localStorage.getItem('playerNickname') || 'Player';
-    const scoreNum = parseInt(score, 10);
-    
-    // Call the contract write function
-    const result = await debugContract.functions.submit_score({
-      player: debugUserAddress,
-      score: scoreNum,
-      nickname: nickname
-    });
-
-    console.log('✅ Score transaction sent:', result);
-    
-    // Wait for transaction confirmation
-    if (result.transaction) {
-      await result.transaction.wait();
-      console.log('✅ Transaction confirmed!', result.transaction.id);
+    if (players.length > 0) {
+      const highScore = Math.max(...Object.values(scores).map(s => s.score));
+      console.log(`Highest score: ${highScore}`);
       
-      // Store locally as a backup
-      saveScoreToLocalStorage(debugUserAddress, scoreNum);
-      return true;
-    } else {
-      console.error('❌ No transaction returned from contract call');
-      return false;
-    }
-  } catch (error) {
-    console.error('❌ Error sending score:', error);
-    // Store locally as a fallback
-    saveScoreToLocalStorage(debugUserAddress, score);
-    return false;
-  }
-}
-
-/**
- * Helper function to save score locally
- */
-function saveScoreToLocalStorage(address, score) {
-  try {
-    if (!address || score <= 0) return false;
-    
-    const scores = JSON.parse(localStorage.getItem('floppykoin_scores') || '{}');
-    const nickname = localStorage.getItem('playerNickname') || 'Player';
-    
-    // Only save if it's a higher score
-    if (!scores[address] || scores[address].score < score) {
-      scores[address] = {
-        player: address,
-        score: score,
-        nickname: nickname,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('floppykoin_scores', JSON.stringify(scores));
-      console.log('Score saved locally:', score);
-      return true;
+      console.log('Top 3 scores:');
+      const topScores = [...Object.values(scores)]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+      
+      topScores.forEach((score, i) => {
+        const nickname = score.nickname || 'Player';
+        console.log(`${i+1}. ${nickname}: ${score.score}`);
+      });
     }
     
-    return false;
+    return players.length;
   } catch (e) {
-    console.error('Error saving score locally:', e);
-    return false;
+    console.error('❌ Error getting local stats:', e);
+    return 0;
   }
 }
 
 /**
- * Helper function to get player score from local storage
+ * Clear all scores from localStorage 
  */
-function getScoreFromLocalStorage(address) {
+function clearLocalScores() {
   try {
-    const scores = JSON.parse(localStorage.getItem('floppykoin_scores') || '{}');
-    return scores[address] || null;
+    localStorage.removeItem('floppykoin_scores');
+    console.log('🧹 All local scores cleared');
+    return true;
   } catch (e) {
-    console.error('Error getting score from local storage:', e);
-    return null;
-  }
-}
-
-/**
- * Helper function to get top scores from local storage
- */
-function getTopScoresFromLocalStorage(limit = 10) {
-  try {
-    const scores = JSON.parse(localStorage.getItem('floppykoin_scores') || '{}');
-    
-    // Convert to array and sort by score
-    const scoresArray = Object.values(scores);
-    
-    // Sort by score (highest first)
-    scoresArray.sort((a, b) => b.score - a.score);
-    
-    // Return only the top N scores
-    return scoresArray.slice(0, limit);
-  } catch (e) {
-    console.error('Error getting top scores from local storage:', e);
-    return [];
+    console.error('❌ Error clearing scores:', e);
+    return false;
   }
 }
 
 // Make functions available in global scope
 window.initContractDebug = initContractDebug;
-window.getPlayerScoreFromChain = getPlayerScoreFromChain;
-window.getTopScoresFromChain = getTopScoresFromChain;
-window.sendScoreToChain = sendScoreToChain;
+window.showLocalStats = showLocalStats;
+window.clearLocalScores = clearLocalScores;
 
 // Auto-initialize when wallet.js has loaded
 setTimeout(() => {

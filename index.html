@@ -16,59 +16,9 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Debug Script Loader -->
-  <script>
-    // Wrapper to load scripts with debugging
-    function loadScript(src, callback) {
-      console.log('Loading script:', src);
-      var script = document.createElement('script');
-      script.src = src;
-      
-      script.onload = function() {
-        console.log('Successfully loaded:', src);
-        if (callback) callback(true);
-      };
-      
-      script.onerror = function(e) {
-        console.error('Failed to load:', src, e);
-        if (callback) callback(false);
-      };
-      
-      document.head.appendChild(script);
-    }
-    
-    // Function to check if koinos is available after scripts are loaded
-    function checkKoinos() {
-      console.log('Checking koinos availability...');
-      console.log('window.koinos:', typeof window.koinos);
-      if (typeof window.koinos === 'undefined') {
-        console.warn('Koinos not detected, trying alternate source...');
-        loadScript('https://unpkg.com/koilib/dist/koinos.min.js', function(success) {
-          if (success) {
-            console.log('Loaded koinos from CDN', typeof window.koinos);
-          }
-        });
-      } else {
-        console.log('Koinos detected with properties:', Object.keys(window.koinos));
-      }
-    }
-    
-    // Load blockchain libraries in sequence with callbacks
-    document.addEventListener('DOMContentLoaded', function() {
-      // First try loading local koinos.min.js
-      loadScript('js/koinos.min.js', function() {
-        // Check if koinos is available
-        setTimeout(checkKoinos, 100);
-        
-        // Then load kondor
-        loadScript('https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js', function() {
-          console.log('Kondor loaded, window.kondor:', typeof window.kondor);
-        });
-      });
-    });
-  </script>
-  
-  <!-- Blockchain Libraries - These will be loaded dynamically via script tags -->
+  <!-- Blockchain Libraries - Direct loading for better dependency management -->
+  <script src="https://unpkg.com/koilib/dist/koinos.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
   
   <!-- Simple wallet CSS -->
   <style>
@@ -247,18 +197,40 @@
   
   <!-- Game Scripts - Load them after DOM content is ready -->
   <script>
-    // Load game scripts after DOM content is loaded and libraries are ready
+    // Wait for DOM content to be loaded, then load game scripts in sequence
     document.addEventListener('DOMContentLoaded', function() {
+      // Simple script loader function
+      function loadScript(src, callback) {
+        console.log('Loading script:', src);
+        var script = document.createElement('script');
+        script.src = src;
+        
+        script.onload = function() {
+          console.log('Successfully loaded:', src);
+          if (callback) callback();
+        };
+        
+        script.onerror = function(e) {
+          console.error('Failed to load:', src, e);
+          if (callback) callback();
+        };
+        
+        document.head.appendChild(script);
+      }
+      
+      // Wait for blockchain libraries to be ready
       setTimeout(function() {
-        // Load wallet.js first
+        // Check if libraries are available
+        console.log("Koinos library loaded:", typeof window.koinos !== 'undefined');
+        console.log("Kondor extension detected:", typeof window.kondor !== 'undefined');
+        
+        // Load game scripts in sequence
         loadScript('js/wallet.js', function() {
-          // Then load leaderboard.js
           loadScript('js/leaderboard.js', function() {
-            // Finally load main.js 
             loadScript('js/main.js');
           });
         });
-      }, 500); // Small delay to ensure blockchain libraries load first
+      }, 500);
     });
   </script>
 </body>
