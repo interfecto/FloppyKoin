@@ -35,9 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(refreshLeaderboard, 2000);
       
       // Show nickname prompt if not set
-      if (!localStorage.getItem('playerNickname')) {
-        promptForNickname();
-      }
+      setTimeout(() => {
+        if (!localStorage.getItem('playerNickname')) {
+          promptForNickname();
+        }
+      }, 3000);
     });
   }
 
@@ -92,7 +94,15 @@ function promptForNickname() {
   if (nickname && nickname.trim() !== '') {
     // Limit to 12 characters
     const trimmedNickname = nickname.trim().substring(0, 12);
-    window.setPlayerNickname(trimmedNickname);
+    
+    // If wallet.js provides this function, use it
+    if (typeof window.setPlayerNickname === 'function') {
+      window.setPlayerNickname(trimmedNickname);
+    } else {
+      // Fallback to direct localStorage
+      localStorage.setItem('playerNickname', trimmedNickname);
+    }
+    
     alert(`Nickname set to: ${trimmedNickname}`);
     
     // Update the leaderboard to reflect the nickname change
@@ -114,7 +124,12 @@ async function refreshLeaderboard() {
   leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">Loading scores...</span><span class="score">-</span></li>';
   
   try {
-    // Get top scores
+    // Check if getTopScores is available from wallet.js
+    if (typeof window.getTopScores !== 'function') {
+      throw new Error('getTopScores function not available');
+    }
+    
+    // Get top scores using the wallet API
     const scores = await window.getTopScores(maxLeaderboardEntries);
     
     if (!scores || scores.length === 0) {
@@ -140,7 +155,53 @@ async function refreshLeaderboard() {
     });
   } catch (error) {
     console.error('Failed to refresh leaderboard:', error);
-    leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">Error loading scores</span><span class="score">-</span></li>';
+    
+    // Try fallback to local storage directly
+    try {
+      const localScores = getLocalLeaderboard(maxLeaderboardEntries);
+      
+      if (localScores.length === 0) {
+        leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">No scores available</span><span class="score">-</span></li>';
+        return;
+      }
+      
+      leaderboardList.innerHTML = '';
+      localScores.forEach((score, index) => {
+        const listItem = document.createElement('li');
+        
+        // Format the player address or use nickname
+        const displayName = score.nickname || formatAddress(score.player);
+        
+        listItem.innerHTML = `
+          <span class="rank">${index + 1}.</span>
+          <span class="player" title="${score.player}">${displayName}</span>
+          <span class="score">${score.score}</span>
+        `;
+        
+        leaderboardList.appendChild(listItem);
+      });
+    } catch (fallbackError) {
+      leaderboardList.innerHTML = '<li><span class="rank">-</span><span class="player">Error loading scores</span><span class="score">-</span></li>';
+    }
+  }
+}
+
+// Get leaderboard from local storage as fallback
+function getLocalLeaderboard(limit = 10) {
+  try {
+    const scores = JSON.parse(localStorage.getItem('floppykoin_scores') || '{}');
+    
+    // Convert to array and sort by score
+    const scoresArray = Object.values(scores);
+    
+    // Sort by score (highest first)
+    scoresArray.sort((a, b) => b.score - a.score);
+    
+    // Return only the top N scores
+    return scoresArray.slice(0, limit);
+  } catch (e) {
+    console.error('Error getting local leaderboard:', e);
+    return [];
   }
 }
 

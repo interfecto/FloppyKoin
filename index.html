@@ -16,9 +16,59 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Blockchain Libraries -->
-  <script src="js/koinos.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  <!-- Debug Script Loader -->
+  <script>
+    // Wrapper to load scripts with debugging
+    function loadScript(src, callback) {
+      console.log('Loading script:', src);
+      var script = document.createElement('script');
+      script.src = src;
+      
+      script.onload = function() {
+        console.log('Successfully loaded:', src);
+        if (callback) callback(true);
+      };
+      
+      script.onerror = function(e) {
+        console.error('Failed to load:', src, e);
+        if (callback) callback(false);
+      };
+      
+      document.head.appendChild(script);
+    }
+    
+    // Function to check if koinos is available after scripts are loaded
+    function checkKoinos() {
+      console.log('Checking koinos availability...');
+      console.log('window.koinos:', typeof window.koinos);
+      if (typeof window.koinos === 'undefined') {
+        console.warn('Koinos not detected, trying alternate source...');
+        loadScript('https://unpkg.com/koilib/dist/koinos.min.js', function(success) {
+          if (success) {
+            console.log('Loaded koinos from CDN', typeof window.koinos);
+          }
+        });
+      } else {
+        console.log('Koinos detected with properties:', Object.keys(window.koinos));
+      }
+    }
+    
+    // Load blockchain libraries in sequence with callbacks
+    document.addEventListener('DOMContentLoaded', function() {
+      // First try loading local koinos.min.js
+      loadScript('js/koinos.min.js', function() {
+        // Check if koinos is available
+        setTimeout(checkKoinos, 100);
+        
+        // Then load kondor
+        loadScript('https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js', function() {
+          console.log('Kondor loaded, window.kondor:', typeof window.kondor);
+        });
+      });
+    });
+  </script>
+  
+  <!-- Blockchain Libraries - These will be loaded dynamically via script tags -->
   
   <!-- Simple wallet CSS -->
   <style>
@@ -41,7 +91,7 @@
     }
     
     /* Button styles */
-    #connect-btn, #submit-score-btn {
+    #connect-btn, #submit-score-btn, #leaderboard-toggle {
       background-color: #f7d51d;
       color: #333;
       border: none;
@@ -56,17 +106,17 @@
       margin: 0 8px;
     }
     
-    #connect-btn:hover, #submit-score-btn:hover {
+    #connect-btn:hover, #submit-score-btn:hover, #leaderboard-toggle:hover {
       background-color: #ffde4c;
       transform: translateY(-2px);
     }
     
-    #connect-btn:active, #submit-score-btn:active {
+    #connect-btn:active, #submit-score-btn:active, #leaderboard-toggle:active {
       border-bottom-width: 2px;
       transform: translateY(2px);
     }
     
-    #connect-btn:disabled, #submit-score-btn:disabled {
+    #connect-btn:disabled, #submit-score-btn:disabled, #leaderboard-toggle:disabled {
       background-color: #cccccc;
       border-bottom-color: #999999;
       color: #666666;
@@ -84,6 +134,66 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    
+    /* Leaderboard Styles */
+    #leaderboard {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      width: 300px;
+      background-color: rgba(0, 0, 0, 0.8);
+      border-radius: 5px;
+      padding: 10px;
+      z-index: 999;
+      display: none;
+      color: white;
+      font-family: 'Pixel', Arial, sans-serif;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    #leaderboard h3 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #f7d51d;
+      font-size: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    #leaderboard-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    #leaderboard-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    #leaderboard-list .rank {
+      width: 30px;
+      text-align: center;
+      font-weight: bold;
+    }
+    
+    #leaderboard-list .player {
+      flex: 1;
+      padding: 0 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    #leaderboard-list .score {
+      width: 60px;
+      text-align: right;
+      font-weight: bold;
+      color: #f7d51d;
+    }
   </style>
 </head>
 <body>
@@ -92,6 +202,15 @@
     <button id="connect-btn">Connect Wallet</button>
     <span id="wallet-address" style="margin:0 1em; opacity:0;">Not connected</span>
     <button id="submit-score-btn" disabled>Submit Score</button>
+    <button id="leaderboard-toggle">🏆 Leaderboard</button>
+  </div>
+
+  <!-- 🏆 Leaderboard -->
+  <div id="leaderboard">
+    <h3>Top FloppyKoin Scores</h3>
+    <ul id="leaderboard-list">
+      <li><span class="rank">-</span><span class="player">Connect wallet to see scores</span><span class="score">-</span></li>
+    </ul>
   </div>
 
   <!-- 🎮 Game Container -->
@@ -126,8 +245,21 @@
   <div class="boundingbox" id="playerbox"></div>
   <div class="boundingbox" id="pipebox"></div>
   
-  <!-- Game Scripts -->
-  <script src="js/main.js"></script>
-  <script src="js/wallet.js"></script>
+  <!-- Game Scripts - Load them after DOM content is ready -->
+  <script>
+    // Load game scripts after DOM content is loaded and libraries are ready
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        // Load wallet.js first
+        loadScript('js/wallet.js', function() {
+          // Then load leaderboard.js
+          loadScript('js/leaderboard.js', function() {
+            // Finally load main.js 
+            loadScript('js/main.js');
+          });
+        });
+      }, 500); // Small delay to ensure blockchain libraries load first
+    });
+  </script>
 </body>
 </html>
