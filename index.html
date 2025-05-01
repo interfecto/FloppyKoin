@@ -16,9 +16,12 @@
   <script src="js/jquery.transit.min.js"></script>
   <script src="js/buzz.min.js"></script>
   
-  <!-- Blockchain Libraries - Direct loading for better dependency management -->
-  <script src="https://unpkg.com/koilib/dist/koinos.min.js"></script>
+  <!-- Blockchain Libraries - First load koilib, then kondor -->
+  <script src="https://cdn.jsdelivr.net/npm/koilib@latest/dist/koinos.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  
+  <!-- Koinos namespace fixup - creates window.koinos from individual globals -->
+  <script src="js/koinos-namespace.js"></script>
   
   <!-- Simple wallet CSS -->
   <style>
