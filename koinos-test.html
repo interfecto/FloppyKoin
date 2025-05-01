@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Koinos Library Test</title>
+  
+  <!-- Load koilib directly -->
+  <script src="https://unpkg.com/koilib/dist/koinos.min.js"></script>
+  
+  <!-- Load Kondor -->
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 10px 0;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Koinos Library Test</h1>
+  
+  <div id="status">Checking library status...</div>
+  
+  <div>
+    <button id="check-koinos">Check Koinos Library</button>
+    <button id="check-kondor">Check Kondor</button>
+    <button id="connect-wallet">Connect Wallet</button>
+    <button id="test-contract" disabled>Test Contract</button>
+  </div>
+  
+  <h2>Console Output</h2>
+  <pre id="console"></pre>
+  
+  <script>
+    // Log function that writes to our console div
+    function log(message, isError = false) {
+      const console = document.getElementById('console');
+      const line = document.createElement('div');
+      line.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      if (isError) line.className = 'error';
+      console.appendChild(line);
+    }
+    
+    // Check if koilib is loaded properly
+    function checkKoinos() {
+      const status = document.getElementById('status');
+      
+      // Check window.koinos
+      try {
+        log(`window.koinos: ${typeof window.koinos}`);
+        
+        if (typeof window.koinos === 'undefined') {
+          log('koinos object not found on window', true);
+          status.innerHTML = '<span class="error">❌ Koinos library not detected</span>';
+          return false;
+        }
+        
+        // Check if key components exist
+        const hasSigner = typeof window.koinos.Signer === 'function';
+        const hasProvider = typeof window.koinos.Provider === 'function';
+        const hasContract = typeof window.koinos.Contract === 'function';
+        const hasUtils = typeof window.koinos.utils === 'object';
+        
+        log(`koinos.Signer: ${hasSigner}`);
+        log(`koinos.Provider: ${hasProvider}`);
+        log(`koinos.Contract: ${hasContract}`);
+        log(`koinos.utils: ${hasUtils}`);
+        
+        if (hasSigner && hasProvider && hasContract && hasUtils) {
+          log('All required koinos components found', false);
+          status.innerHTML = '<span class="success">✅ Koinos library loaded successfully</span>';
+          return true;
+        } else {
+          log('Some koinos components are missing', true);
+          status.innerHTML = '<span class="error">❌ Koinos library loaded but incomplete</span>';
+          return false;
+        }
+      } catch (e) {
+        log(`Error checking koinos: ${e.message}`, true);
+        status.innerHTML = '<span class="error">❌ Error checking Koinos library</span>';
+        return false;
+      }
+    }
+    
+    // Check if Kondor is available
+    function checkKondor() {
+      try {
+        log(`window.kondor: ${typeof window.kondor}`);
+        
+        if (typeof window.kondor === 'undefined') {
+          log('Kondor not found. Please install the Kondor extension', true);
+          return false;
+        }
+        
+        log('Kondor extension detected');
+        return true;
+      } catch (e) {
+        log(`Error checking Kondor: ${e.message}`, true);
+        return false;
+      }
+    }
+    
+    // Connect to wallet
+    async function connectWallet() {
+      try {
+        log('Connecting to Kondor wallet...');
+        
+        if (!window.kondor) {
+          throw new Error('Kondor extension not found');
+        }
+        
+        // Get accounts from Kondor
+        const accounts = await window.kondor.getAccounts();
+        if (!accounts || accounts.length === 0) {
+          throw new Error('No accounts found in Kondor');
+        }
+        
+        const address = accounts[0].address;
+        log(`Connected to wallet: ${address}`);
+        
+        // Enable the test contract button
+        document.getElementById('test-contract').disabled = false;
+        
+        return address;
+      } catch (e) {
+        log(`Failed to connect wallet: ${e.message}`, true);
+        return null;
+      }
+    }
+    
+    // Test contract interaction
+    async function testContract() {
+      try {
+        log('Testing contract interaction...');
+        
+        if (!window.koinos || !window.koinos.Contract) {
+          throw new Error('Koinos library not properly loaded');
+        }
+        
+        if (!window.kondor) {
+          throw new Error('Kondor extension not found');
+        }
+        
+        // Get the connected account
+        const accounts = await window.kondor.getAccounts();
+        if (!accounts || accounts.length === 0) {
+          throw new Error('No accounts found in Kondor');
+        }
+        
+        const address = accounts[0].address;
+        log(`Using address: ${address}`);
+        
+        // Get provider and signer from Kondor
+        const provider = window.kondor.getProvider();
+        const signer = window.kondor.getSigner(address);
+        
+        if (!provider || !signer) {
+          throw new Error('Failed to get provider or signer from Kondor');
+        }
+        
+        log('Provider and signer obtained');
+        
+        // KOIN contract ID
+        const koinContractId = "15DJN4a8SgrbGhhGksSBASiSYjGnMU8dGL";
+        
+        // Create contract instance
+        const koinContract = new window.koinos.Contract({
+          id: koinContractId,
+          abi: window.koinos.utils.tokenAbi,
+          provider: provider,
+          signer: signer
+        });
+        
+        log('Contract instance created');
+        
+        // Get balance
+        log('Getting balance...');
+        const { result } = await koinContract.functions.balanceOf({
+          owner: address
+        });
+        
+        log(`Balance result: ${JSON.stringify(result)}`);
+        
+        if (result && result.value) {
+          // Convert from satoshis to KOIN
+          const koinBalance = result.value / 100000000;
+          log(`KOIN balance: ${koinBalance}`);
+        } else {
+          log('Balance not found or zero');
+        }
+        
+        return true;
+      } catch (e) {
+        log(`Contract test failed: ${e.message}`, true);
+        return false;
+      }
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if libraries are loaded
+      setTimeout(() => {
+        const koinosStatus = checkKoinos();
+        const kondorStatus = checkKondor();
+        
+        // Add event listeners
+        document.getElementById('check-koinos').addEventListener('click', checkKoinos);
+        document.getElementById('check-kondor').addEventListener('click', checkKondor);
+        document.getElementById('connect-wallet').addEventListener('click', connectWallet);
+        document.getElementById('test-contract').addEventListener('click', testContract);
+      }, 500);
+    });
+  </script>
+</body>
+</html> 

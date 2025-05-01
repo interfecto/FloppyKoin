@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Koinos Library Local Test</title>
+  
+  <!-- Load koilib from local file -->
+  <script src="koinos.min.js"></script>
+  
+  <!-- Load Kondor -->
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 10px 0;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Koinos Library Local Test</h1>
+  
+  <div id="status">Checking library status...</div>
+  
+  <div>
+    <button id="check-modules">Check Global Modules</button>
+    <button id="inspect-koinos">Inspect Koinos Object</button>
+  </div>
+  
+  <h2>Console Output</h2>
+  <pre id="console"></pre>
+  
+  <script>
+    // Log function that writes to our console div
+    function log(message, isError = false) {
+      const console = document.getElementById('console');
+      const line = document.createElement('div');
+      line.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      if (isError) line.className = 'error';
+      console.appendChild(line);
+    }
+    
+    // Check global modules
+    function checkGlobalModules() {
+      const globalVars = [
+        'koinos', 'kondor', 'Provider', 'Signer', 'Contract', 'utils'
+      ];
+      
+      log('Checking global modules:');
+      
+      globalVars.forEach(name => {
+        try {
+          const type = typeof window[name];
+          log(`window.${name}: ${type}`);
+          
+          if (type !== 'undefined') {
+            if (type === 'object') {
+              log(`- Keys: ${Object.keys(window[name]).join(', ')}`);
+            } else if (type === 'function') {
+              log(`- Is constructor: ${window[name].toString().startsWith('function')}`);
+            }
+          }
+        } catch (e) {
+          log(`Error checking ${name}: ${e.message}`, true);
+        }
+      });
+    }
+    
+    // Inspect koinos object in detail
+    function inspectKoinos() {
+      log('Inspecting koinos object:');
+      
+      try {
+        if (typeof window.koinos === 'undefined') {
+          log('koinos object not found on window', true);
+          return;
+        }
+        
+        // List all top-level properties
+        const properties = Object.getOwnPropertyNames(window.koinos);
+        log(`Top-level properties: ${properties.join(', ')}`);
+        
+        // Check for common expected objects/functions
+        const checkKeys = [
+          'Signer', 'Provider', 'Contract', 'Transaction', 'utils'
+        ];
+        
+        checkKeys.forEach(key => {
+          try {
+            if (key in window.koinos) {
+              const type = typeof window.koinos[key];
+              log(`koinos.${key}: ${type}`);
+              
+              // If it's an object, list its keys
+              if (type === 'object' && window.koinos[key] !== null) {
+                log(`- Keys in koinos.${key}: ${Object.keys(window.koinos[key]).join(', ')}`);
+              }
+            } else {
+              log(`koinos.${key}: not found`, true);
+            }
+          } catch (e) {
+            log(`Error inspecting koinos.${key}: ${e.message}`, true);
+          }
+        });
+        
+        // Check if the UMD module was loaded correctly
+        if (typeof window.koinos === 'object') {
+          log('koinos appears to be loaded as a module object');
+        } else {
+          log('koinos is not loaded as expected module object', true);
+        }
+      } catch (e) {
+        log(`Error during inspection: ${e.message}`, true);
+      }
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Add event listeners
+      document.getElementById('check-modules').addEventListener('click', checkGlobalModules);
+      document.getElementById('inspect-koinos').addEventListener('click', inspectKoinos);
+      
+      // Check koinos library
+      setTimeout(() => {
+        try {
+          const status = document.getElementById('status');
+          
+          if (typeof window.koinos !== 'undefined') {
+            log('koinos object found on window');
+            status.innerHTML = '<span class="success">✅ Koinos object detected</span>';
+            
+            // Auto-inspect
+            inspectKoinos();
+          } else {
+            log('koinos object not found on window', true);
+            status.innerHTML = '<span class="error">❌ Koinos object not detected</span>';
+            
+            // Check other global variables that might have been exposed
+            checkGlobalModules();
+          }
+        } catch (e) {
+          log(`Error during initialization: ${e.message}`, true);
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html> 

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Koinos Library Alternative CDN Test</title>
+  
+  <!-- Try loading koilib from different CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/koilib@latest/dist/koinos.min.js"></script>
+  
+  <!-- Load Kondor -->
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@latest/dist/kondor.min.js"></script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 10px 0;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    #loader {
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Koinos Library Alternative CDN Test</h1>
+  
+  <div id="status">Checking library status...</div>
+  
+  <div id="loader">
+    <p>Try loading from different sources:</p>
+    <button id="load-unpkg">Load from unpkg</button>
+    <button id="load-jsdelivr">Load from jsdelivr</button>
+    <button id="load-local">Load local file</button>
+  </div>
+  
+  <div>
+    <button id="check-koinos">Check Koinos Library</button>
+    <button id="check-window">Examine Window Object</button>
+  </div>
+  
+  <h2>Console Output</h2>
+  <pre id="console"></pre>
+  
+  <script>
+    // Log function that writes to our console div
+    function log(message, isError = false) {
+      const console = document.getElementById('console');
+      const line = document.createElement('div');
+      line.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      if (isError) line.className = 'error';
+      console.appendChild(line);
+    }
+    
+    // Load script dynamically
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        log(`Loading script: ${src}`);
+        const script = document.createElement('script');
+        script.src = src;
+        
+        script.onload = () => {
+          log(`Successfully loaded: ${src}`);
+          resolve(true);
+        };
+        
+        script.onerror = (error) => {
+          log(`Failed to load: ${src}`, true);
+          reject(error);
+        };
+        
+        document.head.appendChild(script);
+      });
+    }
+    
+    // Check if koilib is loaded properly
+    function checkKoinos() {
+      const status = document.getElementById('status');
+      
+      // Check window.koinos
+      try {
+        log(`window.koinos: ${typeof window.koinos}`);
+        
+        if (typeof window.koinos === 'undefined') {
+          log('koinos object not found on window', true);
+          status.innerHTML = '<span class="error">❌ Koinos library not detected</span>';
+          return false;
+        }
+        
+        // List all available properties
+        const properties = Object.getOwnPropertyNames(window.koinos);
+        log(`Available properties: ${properties.join(', ')}`);
+        
+        // Check if key components exist
+        const hasSigner = typeof window.koinos.Signer === 'function';
+        const hasProvider = typeof window.koinos.Provider === 'function';
+        const hasContract = typeof window.koinos.Contract === 'function';
+        const hasUtils = typeof window.koinos.utils === 'object';
+        
+        log(`koinos.Signer: ${hasSigner}`);
+        log(`koinos.Provider: ${hasProvider}`);
+        log(`koinos.Contract: ${hasContract}`);
+        log(`koinos.utils: ${hasUtils}`);
+        
+        if (hasSigner && hasProvider && hasContract && hasUtils) {
+          log('All required koinos components found', false);
+          status.innerHTML = '<span class="success">✅ Koinos library loaded successfully</span>';
+          return true;
+        } else {
+          log('Some koinos components are missing', true);
+          status.innerHTML = '<span class="error">❌ Koinos library loaded but incomplete</span>';
+          return false;
+        }
+      } catch (e) {
+        log(`Error checking koinos: ${e.message}`, true);
+        status.innerHTML = '<span class="error">❌ Error checking Koinos library</span>';
+        return false;
+      }
+    }
+    
+    // Examine window object for koilib-related properties
+    function checkWindow() {
+      log('Examining window object for koilib-related properties:');
+      
+      // These are commonly exposed globals by koilib
+      const possibleGlobals = [
+        'koinos', 'Provider', 'Signer', 'Contract', 'utils', 
+        'Transaction', 'Serializer', 'multisig'
+      ];
+      
+      possibleGlobals.forEach(name => {
+        log(`window.${name}: ${typeof window[name]}`);
+      });
+      
+      // Check for webpack modules that might contain koilib
+      if (window.webpackJsonp) {
+        log('Found webpack modules on window');
+      }
+      
+      // Check all properties that might be functions
+      const functionProps = Object.getOwnPropertyNames(window)
+        .filter(prop => typeof window[prop] === 'function' && 
+                !prop.startsWith('_') && 
+                prop !== prop.toLowerCase())
+        .slice(0, 20); // Limit to first 20
+      
+      log(`Some function properties on window: ${functionProps.join(', ')}`);
+    }
+    
+    // Load from alternative sources
+    async function loadFromUnpkg() {
+      try {
+        await loadScript('https://unpkg.com/koilib/dist/koinos.min.js');
+        checkKoinos();
+      } catch (e) {
+        log('Failed to load from unpkg', true);
+      }
+    }
+    
+    async function loadFromJsDelivr() {
+      try {
+        await loadScript('https://cdn.jsdelivr.net/npm/koilib@latest/dist/koinos.min.js');
+        checkKoinos();
+      } catch (e) {
+        log('Failed to load from jsdelivr', true);
+      }
+    }
+    
+    async function loadFromLocal() {
+      try {
+        await loadScript('koinos.min.js');
+        checkKoinos();
+      } catch (e) {
+        log('Failed to load local file', true);
+      }
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Add event listeners
+      document.getElementById('check-koinos').addEventListener('click', checkKoinos);
+      document.getElementById('check-window').addEventListener('click', checkWindow);
+      document.getElementById('load-unpkg').addEventListener('click', loadFromUnpkg);
+      document.getElementById('load-jsdelivr').addEventListener('click', loadFromJsDelivr);
+      document.getElementById('load-local').addEventListener('click', loadFromLocal);
+      
+      // Check if library is loaded on page load
+      setTimeout(() => {
+        checkKoinos();
+        log('Initial library check complete');
+      }, 1000);
+    });
+  </script>
+</body>
+</html> 
