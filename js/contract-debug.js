@@ -1,5 +1,5 @@
 // contract-debug.js - Console utilities for contract interaction
-// Version 10.4 - Simplified to work with wallet.js mock implementation
+// Version 10.5 - Works with real blockchain and local storage
 
 // Global variables to store contract state
 let debugUserAddress;
@@ -9,7 +9,7 @@ const DEBUG_CONTRACT_ADDRESS = '15fgcbX1gEkzQfn8oErtaZFzfmBHQ7a4Aq';
 
 /**
  * Initialize the debug contract interaction
- * This integrates with wallet.js if it's already loaded
+ * This integrates with wallet.js functions
  */
 async function initContractDebug() {
   console.log('🔧 Initializing contract debug utilities...');
@@ -29,12 +29,12 @@ async function initContractDebug() {
       }
     }
     
-    // Expose global debug functions that use wallet.js functions
+    // Expose aliases for wallet functions
     window.getPlayerScoreFromChain = window.getPlayerScore;
     window.getTopScoresFromChain = window.getTopScores;
     window.sendScoreToChain = window.sendScore;
     
-    console.log('✅ Debug utilities ready and using wallet.js!');
+    console.log('✅ Debug utilities ready and using wallet.js functions');
     return true;
   }
   
@@ -89,10 +89,44 @@ function clearLocalScores() {
   }
 }
 
+/**
+ * Test contract connection status
+ */
+async function testContractStatus() {
+  console.log('🔍 Testing contract connectivity...');
+  
+  // Check for koinos and kondor
+  console.log(`koinos library: ${typeof window.koinos !== 'undefined' ? '✅' : '❌'}`);
+  console.log(`kondor extension: ${typeof window.kondor !== 'undefined' ? '✅' : '❌'}`);
+  
+  // Check for wallet connection
+  if (typeof window.connectWallet === 'function') {
+    try {
+      const address = await window.connectWallet();
+      console.log(`wallet connected: ✅ (${address})`);
+    } catch (e) {
+      console.error('wallet connection error:', e);
+    }
+  }
+  
+  // Try to get top scores as a test
+  if (typeof window.getTopScores === 'function') {
+    try {
+      const scores = await window.getTopScores(3);
+      console.log('top scores test:', scores);
+    } catch (e) {
+      console.error('get scores error:', e);
+    }
+  }
+  
+  return true;
+}
+
 // Make functions available in global scope
 window.initContractDebug = initContractDebug;
 window.showLocalStats = showLocalStats;
 window.clearLocalScores = clearLocalScores;
+window.testContractStatus = testContractStatus;
 
 // Auto-initialize when wallet.js has loaded
 setTimeout(() => {
